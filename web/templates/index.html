@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Find Waldo — AI</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #e63946;
+      --white:  #f1faee;
+      --navy:   #1d3557;
+      --blue:   #457b9d;
+      --light:  #a8dadc;
+      --bg:     #0f172a;
+      --card:   #1e293b;
+      --border: #334155;
+      --text:   #e2e8f0;
+      --muted:  #94a3b8;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, var(--navy) 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      font-size: 2rem;
+      animation: wave 2s infinite;
+    }
+    @keyframes wave {
+      0%,100% { transform: rotate(0deg); }
+      25%  { transform: rotate(15deg); }
+      75%  { transform: rotate(-10deg); }
+    }
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--red), var(--light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    header p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+
+    /* ── Main layout ──────────────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* ── Upload card ──────────────────────────────── */
+    .upload-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1.2rem;
+      padding: 2rem;
+    }
+    .upload-card h2 { font-size: 1.1rem; margin-bottom: 1.2rem; color: var(--light); }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 1rem;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.02);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--red);
+      background: rgba(230,57,70,0.06);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 3.5rem; margin-bottom: 0.8rem; }
+    .drop-zone p { color: var(--muted); font-size: 0.95rem; }
+    .drop-zone strong { color: var(--red); }
+
+    /* ── Controls ─────────────────────────────────── */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 1.4rem;
+    }
+    .conf-control {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex: 1;
+      min-width: 200px;
+    }
+    .conf-control label { font-size: 0.88rem; color: var(--muted); white-space: nowrap; }
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--red);
+      cursor: pointer;
+    }
+    #conf-val {
+      font-weight: 700;
+      color: var(--red);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    .btn {
+      padding: 0.75rem 2rem;
+      border-radius: 0.6rem;
+      border: none;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #c1121f; transform: translateY(-1px); }
+    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-ghost:hover { border-color: var(--light); color: var(--light); }
+
+    /* ── Preview strip ────────────────────────────── */
+    #preview-strip {
+      display: none;
+      margin-top: 1rem;
+      border-radius: 0.8rem;
+      overflow: hidden;
+      max-height: 180px;
+      background: rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    #preview-strip img { max-height: 180px; max-width: 100%; object-fit: contain; }
+
+    /* ── Spinner ──────────────────────────────────── */
+    #spinner {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    .spin {
+      width: 52px; height: 52px;
+      border: 4px solid var(--border);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result card ──────────────────────────────── */
+    #result-card {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1.2rem;
+      overflow: hidden;
+    }
+
+    .result-header {
+      padding: 1.2rem 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 99px;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .badge-found { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid #4ade8044; }
+    .badge-notfound { background: rgba(230,57,70,0.15); color: var(--red); border: 1px solid var(--red)44; }
+
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat .val { font-size: 1.5rem; font-weight: 800; color: var(--light); }
+    .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Image viewer ─────────────────────────────── */
+    .img-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+    .img-tab {
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+    .img-tab:hover { color: var(--text); }
+    .img-tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+    .img-panel { display: none; padding: 1.5rem; text-align: center; }
+    .img-panel.active { display: block; }
+    .img-panel img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 0.6rem;
+      object-fit: contain;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+    }
+
+    /* ── Detections list ──────────────────────────── */
+    #det-list {
+      padding: 1.2rem 1.8rem;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+    #det-list h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.8rem; }
+    .det-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 0.8rem;
+      border-radius: 0.5rem;
+      background: rgba(255,255,255,0.03);
+      margin-bottom: 0.5rem;
+      font-size: 0.88rem;
+    }
+    .det-num {
+      width: 24px; height: 24px;
+      background: var(--red);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.75rem; color: #fff; flex-shrink: 0;
+    }
+    .det-conf { margin-left: auto; font-weight: 700; color: #4ade80; }
+    .conf-bar {
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .conf-bar-fill { height: 100%; background: #4ade80; border-radius: 2px; }
+
+    /* ── Error banner ─────────────────────────────── */
+    #error-box {
+      display: none;
+      background: rgba(230,57,70,0.1);
+      border: 1px solid var(--red);
+      border-radius: 0.8rem;
+      padding: 1rem 1.5rem;
+      color: var(--red);
+    }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🔍</div>
+  <div>
+    <h1>Find Waldo · AI</h1>
+    <p>YOLOv8 object detection · trained on 587 labeled scenes</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- Upload card -->
+  <div class="upload-card">
+    <h2>Upload a Where's Waldo image</h2>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="drop-icon">🖼️</div>
+      <p><strong>Click to upload</strong> or drag &amp; drop</p>
+      <p style="margin-top:0.4rem; font-size:0.82rem;">JPG, PNG, WebP — max 20 MB</p>
+    </div>
+
+    <div id="preview-strip">
+      <img id="preview-img" src="" alt="preview" />
+    </div>
+
+    <div class="controls">
+      <div class="conf-control">
+        <label for="conf-slider">Confidence threshold</label>
+        <input type="range" id="conf-slider" min="0.05" max="0.90" step="0.05" value="0.25" />
+        <span id="conf-val">25%</span>
+      </div>
+      <button class="btn btn-ghost" id="clear-btn" style="display:none">✕ Clear</button>
+      <button class="btn btn-primary" id="find-btn" disabled>
+        <span>🔍</span> Find Waldo
+      </button>
+    </div>
+  </div>
+
+  <!-- Spinner -->
+  <div id="spinner">
+    <div class="spin"></div>
+    <p style="color:var(--muted)">Searching for Waldo…</p>
+  </div>
+
+  <!-- Error -->
+  <div id="error-box"></div>
+
+  <!-- Result card -->
+  <div id="result-card">
+    <div class="result-header">
+      <div id="result-badge"></div>
+      <div class="stats">
+        <div class="stat">
+          <div class="val" id="stat-count">—</div>
+          <div class="lbl">detections</div>
+        </div>
+        <div class="stat">
+          <div class="val" id="stat-conf">—</div>
+          <div class="lbl">best confidence</div>
+        </div>
+        <div class="stat">
+          <div class="val" id="stat-size">—</div>
+          <div class="lbl">image size</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="img-tabs">
+      <button class="img-tab active" data-panel="result">Result</button>
+      <button class="img-tab" data-panel="original">Original</button>
+    </div>
+
+    <div class="img-panel active" id="panel-result">
+      <img id="result-img" src="" alt="Result" />
+    </div>
+    <div class="img-panel" id="panel-original">
+      <img id="original-img" src="" alt="Original" />
+    </div>
+
+    <div id="det-list">
+      <h3>DETECTIONS</h3>
+      <div id="det-items"></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Model: YOLOv8-nano fine-tuned on
+  <a href="https://github.com/vc1492a/Hey-Waldo" target="_blank">Hey-Waldo</a>,
+  <a href="https://github.com/tadejmagajna/HereIsWally" target="_blank">HereIsWally</a>,
+  and Kaggle datasets · Built with
+  <a href="https://github.com/ultralytics/ultralytics" target="_blank">Ultralytics YOLOv8</a>
+</footer>
+
+<script>
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const previewImg = document.getElementById('preview-img');
+  const previewStrip = document.getElementById('preview-strip');
+  const confSlider = document.getElementById('conf-slider');
+  const confVal    = document.getElementById('conf-val');
+  const findBtn    = document.getElementById('find-btn');
+  const clearBtn   = document.getElementById('clear-btn');
+  const spinner    = document.getElementById('spinner');
+  const errorBox   = document.getElementById('error-box');
+  const resultCard = document.getElementById('result-card');
+
+  let selectedFile = null;
+
+  // Confidence slider
+  confSlider.addEventListener('input', () => {
+    confVal.textContent = Math.round(confSlider.value * 100) + '%';
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadFile(fileInput.files[0]);
+  });
+
+  function loadFile(file) {
+    selectedFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewStrip.style.display = 'block';
+    findBtn.disabled = false;
+    clearBtn.style.display = '';
+    hideResults();
+  }
+
+  clearBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    previewStrip.style.display = 'none';
+    findBtn.disabled = true;
+    clearBtn.style.display = 'none';
+    hideResults();
+  });
+
+  function hideResults() {
+    resultCard.style.display = 'none';
+    errorBox.style.display = 'none';
+    spinner.style.display = 'none';
+  }
+
+  // Tab switching
+  document.querySelectorAll('.img-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.img-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  // Find Waldo
+  findBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    hideResults();
+    spinner.style.display = 'block';
+    findBtn.disabled = true;
+
+    const form = new FormData();
+    form.append('image', selectedFile);
+    form.append('conf', confSlider.value);
+
+    try {
+      const res = await fetch('/predict', { method: 'POST', body: form });
+      const data = await res.json();
+      spinner.style.display = 'none';
+      findBtn.disabled = false;
+
+      if (data.error) { showError(data.error); return; }
+
+      showResult(data);
+    } catch (err) {
+      spinner.style.display = 'none';
+      findBtn.disabled = false;
+      showError('Request failed: ' + err.message);
+    }
+  });
+
+  function showError(msg) {
+    errorBox.textContent = '⚠️  ' + msg;
+    errorBox.style.display = 'block';
+  }
+
+  function showResult(data) {
+    // Badge
+    const badge = document.getElementById('result-badge');
+    if (data.found) {
+      badge.innerHTML = `<span class="badge badge-found">✅ Waldo Found!</span>`;
+    } else {
+      badge.innerHTML = `<span class="badge badge-notfound">❌ Waldo Not Found</span>`;
+    }
+
+    // Stats
+    document.getElementById('stat-count').textContent = data.count;
+    const bestConf = data.detections.length
+      ? Math.round(Math.max(...data.detections.map(d => d.confidence)) * 100) + '%'
+      : '—';
+    document.getElementById('stat-conf').textContent = bestConf;
+    document.getElementById('stat-size').textContent = `${data.image_w}×${data.image_h}`;
+
+    // Images
+    document.getElementById('result-img').src   = 'data:image/jpeg;base64,' + data.result_image;
+    document.getElementById('original-img').src = 'data:image/jpeg;base64,' + data.original_image;
+
+    // Switch to result tab
+    document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.img-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-panel="result"]').classList.add('active');
+    document.getElementById('panel-result').classList.add('active');
+
+    // Detection list
+    const detList = document.getElementById('det-list');
+    const detItems = document.getElementById('det-items');
+    detItems.innerHTML = '';
+    if (data.detections.length > 0) {
+      data.detections.forEach((d, i) => {
+        const pct = Math.round(d.confidence * 100);
+        detItems.innerHTML += `
+          <div class="det-item">
+            <div class="det-num">${i+1}</div>
+            <div>
+              <div>Box (${d.x1}, ${d.y1}) → (${d.x2}, ${d.y2})</div>
+              <div style="color:var(--muted);font-size:0.8rem">Centre: (${d.cx}, ${d.cy})</div>
+            </div>
+            <div class="conf-bar"><div class="conf-bar-fill" style="width:${pct}%"></div></div>
+            <div class="det-conf">${pct}%</div>
+          </div>`;
+      });
+      detList.style.display = 'block';
+    } else {
+      detList.style.display = 'none';
+    }
+
+    resultCard.style.display = 'block';
+
+    // Scroll to result
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+
+</body>
+</html>
