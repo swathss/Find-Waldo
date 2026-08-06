@@ -27,9 +27,6 @@ Full method write-up: [SYNTH_APPROACH.md](SYNTH_APPROACH.md).
 ```bash
 conda env create -f environment.yml && conda activate waldo-finder   # or: pip install -r requirements.txt
 
-python src/download_dataset.py                              # clone licensed Git sources
-python src/merge_datasets.py                                # add Wally-Finder; group-safe splits
-python scripts/preview_dataset.py                           # inspect converted bounding boxes
 python -m synth.foregrounds                                   # mine Waldo cut-outs
 python -m synth.generate --train 3000 --val 500 --test 300    # build synthetic+real dataset
 python scripts/train_synth.py --model yolov8s.pt --epochs 100 # train (Apple MPS / CUDA / CPU)
@@ -53,25 +50,8 @@ waldo-finder/
 ├── src/                    # earlier baseline scripts (template match, etc.)
 ├── web/                    # Flask demo (upload an image, get detections)
 ├── data/                   # datasets (git-ignored, regenerable)
-├── DATASETS.md             # source inventory, licences, leakage controls
 └── results/                # inference output images
 ```
-
-## Data used
-
-The local collection now combines three published sources:
-
-| Dataset | Available data | How it is used |
-|---|---:|---|
-| Hey-Waldo | 317 colour 256 px patches | 286 hard negatives/backgrounds; positive classification patches are not promoted to inaccurate whole-image boxes |
-| HereIsWally | 36 scenes, 43 Waldo boxes | Real labelled crops |
-| Wally-Finder v5 | 249 images, 49 Wally boxes | Additional Wally examples and other-character hard negatives |
-
-The merge is leakage-safe at the source-page level. For example,
-`13.jpg`, `13_0_2.jpg`, and `13_jpg.rf.<hash>.jpg` are treated as the same
-puzzle group and can only occur in one split. The generated
-`data/processed_v2/manifest.csv` makes every assignment auditable. See
-[DATASETS.md](DATASETS.md) for download instructions, licences, and caveats.
 
 ## How it finds Waldo in any image
 
@@ -94,9 +74,8 @@ Produced by `scripts/eval_synth.py` (confusion matrix + PR curves under
 
 ## Credits & prior art
 
-- Hey-Waldo dataset, Valentino Constantinou (vc1492a): https://github.com/vc1492a/Hey-Waldo (ODbL 1.0 database licence)
+- Hey-Waldo dataset, Valentino Constantinou (vc1492a): https://github.com/vc1492a/Hey-Waldo (Apache 2.0)
 - HereIsWally, Tadej Magajna: https://github.com/tadejmagajna/HereIsWally (MIT)
-- Wally-Finder v5: https://universe.roboflow.com/wheres-wally/wally-finder/dataset/5 (CC BY 4.0)
 - YOLOv8, Ultralytics: https://github.com/ultralytics/ultralytics
 - Synthetic copy-paste augmentation is inspired by "Cut, Paste and Learn" (Dwibedi et al., 2017).
 

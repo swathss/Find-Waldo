@@ -21,11 +21,6 @@ Rather than fine-tune on the ~250 real images, we generate training data:
 Cut-outs are mined from the train split only. The val/test Waldo images are
 never used to make training data, so they stay a clean benchmark.
 
-The real split is also grouped by source puzzle page across Hey-Waldo,
-HereIsWally, and Wally-Finder v5. Roboflow variants and patches derived from
-the same numbered page cannot cross train/validation/test boundaries. See
-`DATASETS.md` and `data/processed_v2/manifest.csv`.
-
 ## Training and evaluation
 
 The model is YOLOv8s, transfer-learned from COCO weights, trained mostly on

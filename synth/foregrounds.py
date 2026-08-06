@@ -129,14 +129,12 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for p in OUT.glob("*.png"):
         p.unlink()
-
-    # Mine only from the unified *training* split. Calling from_hereiswally
-    # directly would also mine held-out pages and leak their Waldo appearance
-    # into synthetic training samples.
-    n = from_processed(0)
-    print("processed train split:", n)
-    # Hey-Waldo positives are classification patches rather than localized
-    # boxes, so they are not suitable for foreground extraction.
+    n = from_hereiswally(0)
+    print("hereiswally:", n)
+    n = from_processed(n)
+    print("+ processed:", n)
+    # Hey-Waldo positive patches are whole crowd tiles, not isolated Waldo,
+    # so they're not used here.
     print("total:", len(list(OUT.glob("*.png"))))
 
 
