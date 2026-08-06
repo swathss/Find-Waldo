@@ -2,11 +2,11 @@
 Merge all data sources into one unified YOLO dataset.
 
 Sources:
-  1. mohaneddz/wheres-waldo (Kaggle) — 542 YOLO-labeled tiles, class 1=Waldo
-     Already split train/val/test — copy directly, remap class 1→0
-  2. HereIsWally (GitHub) — 36 full scenes + CSV bboxes
-     Convert to YOLO tiles (640×640 crops centered on Waldo)
-  3. Hey-Waldo 256px patches (Kaggle residentmario) — 31 positive patches
+  1. mohaneddz/wheres-waldo (Kaggle): 542 YOLO-labeled tiles, class 1=Waldo
+     Already split train/val/test, copy directly, remap class 1->0
+  2. HereIsWally (GitHub): 36 full scenes + CSV bboxes
+     Convert to YOLO tiles (640x640 crops centered on Waldo)
+  3. Hey-Waldo 256px patches (Kaggle residentmario): 31 positive patches
      bbox = whole frame
 
 Total expected: ~600 training samples (vs 52 before)
@@ -27,7 +27,7 @@ def yolo_line(cls, cx, cy, w, h):
     return f"{cls} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n"
 
 
-# ── Source 1: mohaneddz (already YOLO, remap class 1→0) ──────────────────────
+# --- Source 1: mohaneddz (already YOLO, remap class 1 to 0) ---
 
 def collect_mohaneddz():
     base = RAW / "kaggle_mohaneddz" / "processed"
@@ -54,7 +54,7 @@ def collect_mohaneddz():
     return samples
 
 
-# ── Source 2: HereIsWally full scenes → 640px crops ──────────────────────────
+# --- Source 2: HereIsWally full scenes to 640px crops ---
 
 def collect_hereiswally_crops():
     import cv2
@@ -98,10 +98,10 @@ def collect_hereiswally_crops():
             samples.append((crop, [yolo_line(0, cx, cy, bw, bh)],
                              f"wally_{Path(filename).stem}"))
     print(f"  HereIsWally crops          : {len(samples)}")
-    return samples  # returns (ndarray, lines, stem) — handled separately
+    return samples  # returns (ndarray, lines, stem), handled separately
 
 
-# ── Source 3: Hey-Waldo 256px patches ────────────────────────────────────────
+# Source 3: Hey-Waldo 256px patches
 
 def collect_256_patches():
     base = RAW / "kaggle_residentmario" / "wheres-waldo" / "Hey-Waldo" / "256" / "waldo"
@@ -113,7 +113,7 @@ def collect_256_patches():
     return samples
 
 
-# ── Write split ───────────────────────────────────────────────────────────────
+# Write split
 
 def write_split_paths(path_samples, split, base):
     import shutil

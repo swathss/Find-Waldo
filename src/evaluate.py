@@ -1,5 +1,5 @@
 """
-Step 4 – Evaluate the trained model on the held-out test set.
+Step 4: Evaluate the trained model on the held-out test set.
 
 Reports:
   • mAP@0.5    (mean Average Precision at IoU threshold 0.5)
@@ -41,13 +41,12 @@ def main():
     map50 = metrics.box.map50     # mAP@0.5
     f1  = 2 * p * r / (p + r + 1e-9)
 
-    print("\n─── Test-set results ───────────────────────────")
+    print("\nTest-set results")
     print(f"  mAP@0.5   : {map50:.4f}")
     print(f"  Precision : {p:.4f}")
     print(f"  Recall    : {r:.4f}")
     print(f"  F1        : {f1:.4f}")
-    print("────────────────────────────────────────────────")
-    print("Next: run  python src/predict.py --image <path>")
+    print("\nNext: run  python src/predict.py --image <path>")
 
 
 if __name__ == "__main__":

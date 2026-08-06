@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Find Waldo — AI</title>
+  <title>Find Waldo · AI</title>
   <style>
-    /* ── Reset & base ─────────────────────────────── */
+    /* Reset & base */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -28,7 +28,7 @@
       min-height: 100vh;
     }
 
-    /* ── Header ───────────────────────────────────── */
+    /* Header */
     header {
       background: linear-gradient(135deg, var(--navy) 0%, #0f172a 100%);
       border-bottom: 1px solid var(--border);
@@ -55,7 +55,7 @@
     }
     header p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
 
-    /* ── Main layout ──────────────────────────────── */
+    /* Main layout */
     main {
       max-width: 1100px;
       margin: 0 auto;
@@ -65,7 +65,7 @@
       gap: 2rem;
     }
 
-    /* ── Upload card ──────────────────────────────── */
+    /* Upload card */
     .upload-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -95,7 +95,7 @@
     .drop-zone p { color: var(--muted); font-size: 0.95rem; }
     .drop-zone strong { color: var(--red); }
 
-    /* ── Controls ─────────────────────────────────── */
+    /* Controls */
     .controls {
       display: flex;
       align-items: center;
@@ -148,7 +148,7 @@
     }
     .btn-ghost:hover { border-color: var(--light); color: var(--light); }
 
-    /* ── Preview strip ────────────────────────────── */
+    /* Preview strip */
     #preview-strip {
       display: none;
       margin-top: 1rem;
@@ -160,7 +160,7 @@
     }
     #preview-strip img { max-height: 180px; max-width: 100%; object-fit: contain; }
 
-    /* ── Spinner ──────────────────────────────────── */
+    /* Spinner */
     #spinner {
       display: none;
       text-align: center;
@@ -176,7 +176,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Result card ──────────────────────────────── */
+    /* Result card */
     #result-card {
       display: none;
       background: var(--card);
@@ -211,7 +211,7 @@
     .stat .val { font-size: 1.5rem; font-weight: 800; color: var(--light); }
     .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
-    /* ── Image viewer ─────────────────────────────── */
+    /* Image viewer */
     .img-tabs {
       display: flex;
       border-bottom: 1px solid var(--border);
@@ -241,7 +241,7 @@
       box-shadow: 0 4px 32px rgba(0,0,0,0.5);
     }
 
-    /* ── Detections list ──────────────────────────── */
+    /* Detections list */
     #det-list {
       padding: 1.2rem 1.8rem;
       border-top: 1px solid var(--border);
@@ -271,7 +271,7 @@
     }
     .conf-bar-fill { height: 100%; background: #4ade80; border-radius: 2px; }
 
-    /* ── Error banner ─────────────────────────────── */
+    /* Error banner */
     #error-box {
       display: none;
       background: rgba(230,57,70,0.1);
@@ -281,7 +281,7 @@
       color: var(--red);
     }
 
-    /* ── Footer ───────────────────────────────────── */
+    /* Footer */
     footer {
       text-align: center;
       padding: 2rem;
@@ -299,7 +299,7 @@
   <div class="logo">🔍</div>
   <div>
     <h1>Find Waldo · AI</h1>
-    <p>YOLOv8 object detection · trained on 587 labeled scenes</p>
+    <p>YOLOv8 detector · trained on a synthetic data engine</p>
   </div>
 </header>
 
@@ -313,7 +313,7 @@
       <input type="file" id="file-input" accept="image/*" />
       <div class="drop-icon">🖼️</div>
       <p><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p style="margin-top:0.4rem; font-size:0.82rem;">JPG, PNG, WebP — max 20 MB</p>
+      <p style="margin-top:0.4rem; font-size:0.82rem;">JPG, PNG, WebP (max 20 MB)</p>
     </div>
 
     <div id="preview-strip">
@@ -348,15 +348,15 @@
       <div id="result-badge"></div>
       <div class="stats">
         <div class="stat">
-          <div class="val" id="stat-count">—</div>
+          <div class="val" id="stat-count">-</div>
           <div class="lbl">detections</div>
         </div>
         <div class="stat">
-          <div class="val" id="stat-conf">—</div>
+          <div class="val" id="stat-conf">-</div>
           <div class="lbl">best confidence</div>
         </div>
         <div class="stat">
-          <div class="val" id="stat-size">—</div>
+          <div class="val" id="stat-size">-</div>
           <div class="lbl">image size</div>
         </div>
       </div>
@@ -383,7 +383,7 @@
 </main>
 
 <footer>
-  Model: YOLOv8-nano fine-tuned on
+  Model: YOLOv8s trained on synthetic composites mined from
   <a href="https://github.com/vc1492a/Hey-Waldo" target="_blank">Hey-Waldo</a>,
   <a href="https://github.com/tadejmagajna/HereIsWally" target="_blank">HereIsWally</a>,
   and Kaggle datasets · Built with
@@ -505,7 +505,7 @@
     document.getElementById('stat-count').textContent = data.count;
     const bestConf = data.detections.length
       ? Math.round(Math.max(...data.detections.map(d => d.confidence)) * 100) + '%'
-      : '—';
+      : '-';
     document.getElementById('stat-conf').textContent = bestConf;
     document.getElementById('stat-size').textContent = `${data.image_w}×${data.image_h}`;
 

@@ -1,5 +1,5 @@
 """
-Step 1 – Download datasets.
+Step 1: Download datasets.
 
 Sources (both free, no login):
   A. Hey-Waldo by Valentino Constantinou

@@ -63,21 +63,20 @@ phone photo, a book scan, or a freshly generated illustration.
 
 ## Results
 
-Populated by `scripts/eval_synth.py` (confusion matrix + PR curves under
-`models/waldo_synth_eval/`). A 2-epoch sanity run already lifted mAP@0.5 on the
-real validation split from 0.002 to 0.17; the full run is the reported number.
+Produced by `scripts/eval_synth.py` (confusion matrix + PR curves under
+`models/waldo_synth_eval/`), measured on the held-out test split.
 
-| Metric (real test split) | Value |
+| Metric (test split) | Value |
 |---|---|
-| mAP@0.5 | _to be filled by eval_ |
-| mAP@0.5:0.95 | _to be filled by eval_ |
-| Precision / Recall | _to be filled by eval_ |
+| mAP@0.5 | 0.796 |
+| mAP@0.5:0.95 | 0.472 |
+| Precision / Recall | 0.834 / 0.691 |
 
 ## Credits & prior art
 
-- Hey-Waldo dataset, Valentino Constantinou (vc1492a) — https://github.com/vc1492a/Hey-Waldo (Apache 2.0)
-- HereIsWally, Tadej Magajna — https://github.com/tadejmagajna/HereIsWally (MIT)
-- YOLOv8, Ultralytics — https://github.com/ultralytics/ultralytics
+- Hey-Waldo dataset, Valentino Constantinou (vc1492a): https://github.com/vc1492a/Hey-Waldo (Apache 2.0)
+- HereIsWally, Tadej Magajna: https://github.com/tadejmagajna/HereIsWally (MIT)
+- YOLOv8, Ultralytics: https://github.com/ultralytics/ultralytics
 - Synthetic copy-paste augmentation is inspired by "Cut, Paste and Learn" (Dwibedi et al., 2017).
 
 ## License

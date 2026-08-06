@@ -1,5 +1,5 @@
 """
-Find Waldo — Flask Web App
+Find Waldo: Flask web app
 Run: python web/app.py
 Then open: http://localhost:5000
 """
@@ -17,8 +17,8 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB max upload
 
 ROOT    = Path(__file__).parent.parent
-MODEL   = ROOT / "runs/detect/models/waldo_v2/weights/best.pt"
-FALLBACK= ROOT / "models/waldo_yolov8n/weights/best.pt"
+MODEL   = ROOT / "models/waldo_synth/weights/best.pt"
+FALLBACK= ROOT / "runs/detect/models/waldo_v2/weights/best.pt"
 
 # Load model once at startup
 model_path = MODEL if MODEL.exists() else FALLBACK

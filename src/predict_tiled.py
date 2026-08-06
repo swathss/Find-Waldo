@@ -1,8 +1,8 @@
 """
 Tiled inference for large Where's Waldo scenes.
 
-The problem: Waldo is ~0.01–0.07% of the scene image — after YOLO resizes
-to 640px, Waldo shrinks to just 3–15 pixels, making reliable detection
+The problem: Waldo is ~0.01-0.07% of the scene image, so after YOLO resizes
+to 640px he shrinks to just 3-15 pixels, making reliable detection
 nearly impossible.
 
 The fix: Slice the scene into overlapping 640×640 tiles, run YOLO on each,
@@ -104,7 +104,7 @@ def predict_tiled(image_path: Path, tile_size: int = 640,
         cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 0, 255), 3)
         cv2.putText(vis, f"Waldo {sc:.2f}", (x1, max(y1 - 8, 12)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-        print(f"  [FOUND] ({x1},{y1})–({x2},{y2})  conf={sc:.2f}")
+        print(f"  [FOUND] ({x1},{y1})-({x2},{y2})  conf={sc:.2f}")
 
     out = RESULTS / f"tiled_{image_path.name}"
     cv2.imwrite(str(out), vis)

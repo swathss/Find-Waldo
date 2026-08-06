@@ -1,5 +1,5 @@
 """
-Step 2 – Convert raw data → YOLO format dataset.
+Step 2: Convert raw data to YOLO format dataset.
 
 YOLO label format (one .txt per image, same stem):
   <class_id> <cx> <cy> <w> <h>   (all values 0-1, relative to image size)
@@ -28,13 +28,13 @@ CLASS_ID = 0   # only one class: waldo
 SEED = 42
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# helpers
 
 def yolo_line(cx, cy, w, h):
     return f"{CLASS_ID} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n"
 
 
-# ── collect samples ───────────────────────────────────────────────────────────
+# collect samples
 
 def collect_hereiswally():
     """
@@ -96,7 +96,7 @@ def collect_heywaldo():
     return samples
 
 
-# ── split & write ─────────────────────────────────────────────────────────────
+# split & write
 
 def write_split(samples, split_name):
     img_dir = PROC / split_name / "images"
@@ -115,7 +115,7 @@ def write_split(samples, split_name):
 
 def write_yaml():
     yaml_path = PROC / "data.yaml"
-    content = f"""# YOLO dataset config — Find Waldo
+    content = f"""# YOLO dataset config for Find Waldo
 path: {PROC.resolve()}
 train: train/images
 val:   val/images
@@ -128,7 +128,7 @@ names: ['waldo']
     print(f"\nWrote {yaml_path}")
 
 
-# ── main ──────────────────────────────────────────────────────────────────────
+# main
 
 def main():
     print("Collecting samples…")

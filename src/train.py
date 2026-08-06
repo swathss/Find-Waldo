@@ -1,5 +1,5 @@
 """
-Step 3 – Fine-tune YOLOv8-nano on the Waldo dataset.
+Step 3: Fine-tune YOLOv8-nano on the Waldo dataset.
 
 YOLOv8 by Ultralytics: https://github.com/ultralytics/ultralytics
 We start from the COCO-pretrained 'yolov8n.pt' weights (nano = fastest,

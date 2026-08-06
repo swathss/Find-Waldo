@@ -25,7 +25,7 @@ def main():
     model = YOLO(str(BEST_PT))
 
     print(f"\n{'Conf':>6} {'Precision':>10} {'Recall':>8} {'F1':>8} {'mAP50':>8}")
-    print("─" * 46)
+    print("-" * 46)
 
     rows = []
     for conf in [0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7]:

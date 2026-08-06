@@ -2,7 +2,7 @@
 Alternative dataset prep: instead of feeding full scenes to YOLO,
 extract 640×640 crops centered on Waldo's ground-truth location.
 
-This gives the model a consistent, detectable Waldo size (~32–80px in 640px)
+This gives the model a consistent, detectable Waldo size (~32-80px in 640px)
 instead of the ~10px Waldo that appears when full 2048px scenes are resized.
 
 Run this instead of prepare_dataset.py:

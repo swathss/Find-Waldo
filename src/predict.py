@@ -1,5 +1,5 @@
 """
-Step 5 – Run inference on a single image and save the annotated result.
+Step 5: Run inference on a single image and save the annotated result.
 
 Usage:
   python src/predict.py --image path/to/waldo_scene.jpg
@@ -19,7 +19,7 @@ BEST_PT  = ROOT / "models" / "waldo_yolov8n" / "weights" / "best.pt"
 RESULTS  = ROOT / "results"
 RESULTS.mkdir(exist_ok=True)
 
-# ── YOLO inference ────────────────────────────────────────────────────────────
+# YOLO inference
 
 def predict_yolo(image_path: Path, conf: float = 0.25):
     if not BEST_PT.exists():
@@ -61,7 +61,7 @@ def predict_yolo(image_path: Path, conf: float = 0.25):
     print(f"  Saved → {out_path}")
 
 
-# ── Template-matching baseline (no ML) ───────────────────────────────────────
+# Template-matching baseline (no ML)
 
 def predict_template(image_path: Path, template_path: Path = None):
     """
@@ -105,7 +105,7 @@ def predict_template(image_path: Path, template_path: Path = None):
     print(f"  Saved → {out_path}")
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# CLI
 
 def main():
     parser = argparse.ArgumentParser(description="Find Waldo in an image")
@@ -120,7 +120,7 @@ def main():
         return
 
     print(f"\nRunning on: {image_path.name}")
-    print("─" * 50)
+    print("-" * 50)
 
     print("\n[1/2] YOLO inference…")
     predict_yolo(image_path, conf=args.conf)

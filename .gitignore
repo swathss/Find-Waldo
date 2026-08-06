@@ -23,6 +23,3 @@ env/
 .DS_Store
 .idea/
 .vscode/
-
-# agent/editor config
-.claude/
