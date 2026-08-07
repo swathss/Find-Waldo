@@ -17,14 +17,76 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB max upload
 
 ROOT    = Path(__file__).parent.parent
-MODEL   = ROOT / "models/waldo_synth/weights/best.pt"
-FALLBACK= ROOT / "runs/detect/models/waldo_v2/weights/best.pt"
+MODEL   = ROOT / "models/waldo_synth_A/weights/best.pt"
+FALLBACK= ROOT / "models/waldo_synth/weights/best.pt"
 
 # Load model once at startup
 model_path = MODEL if MODEL.exists() else FALLBACK
 print(f"Loading model: {model_path}")
 yolo = YOLO(str(model_path))
 print("Model ready ✓")
+
+
+def _nms(dets, iou_thresh=0.45):
+    if len(dets) == 0:
+        return np.empty((0, 5), dtype=np.float32)
+
+    dets = np.asarray(dets, dtype=np.float32)
+    x1, y1, x2, y2, scores = dets.T
+    areas = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
+    order = scores.argsort()[::-1]
+    keep = []
+
+    while order.size:
+        i = order[0]
+        keep.append(i)
+        if order.size == 1:
+            break
+
+        rest = order[1:]
+        xx1 = np.maximum(x1[i], x1[rest])
+        yy1 = np.maximum(y1[i], y1[rest])
+        xx2 = np.minimum(x2[i], x2[rest])
+        yy2 = np.minimum(y2[i], y2[rest])
+        inter = np.maximum(0, xx2 - xx1) * np.maximum(0, yy2 - yy1)
+        union = areas[i] + areas[rest] - inter
+        iou = np.divide(inter, union, out=np.zeros_like(inter), where=union > 0)
+        order = rest[iou <= iou_thresh]
+
+    return dets[keep]
+
+
+def detect_tiled(model, img, tile=640, overlap=128, conf=0.25):
+    # waldo is tiny, so slide a window over the full image instead of shrinking it
+    h, w = img.shape[:2]
+    step = tile - overlap
+    x_starts = list(range(0, max(w - tile, 0) + 1, step))
+    y_starts = list(range(0, max(h - tile, 0) + 1, step))
+    last_x = max(w - tile, 0)
+    last_y = max(h - tile, 0)
+    if not x_starts or x_starts[-1] != last_x:
+        x_starts.append(last_x)
+    if not y_starts or y_starts[-1] != last_y:
+        y_starts.append(last_y)
+
+    dets = []
+    for y in y_starts:
+        for x in x_starts:
+            crop = img[y:min(y + tile, h), x:min(x + tile, w)]
+            results = model.predict(
+                source=crop,
+                conf=conf,
+                iou=0.45,
+                imgsz=tile,
+                verbose=False,
+            )
+            for result in results:
+                for box in result.boxes:
+                    bx1, by1, bx2, by2 = map(float, box.xyxy[0])
+                    confidence = float(box.conf[0])
+                    dets.append([bx1 + x, by1 + y, bx2 + x, by2 + y, confidence])
+
+    return _nms(dets)
 
 
 def pil_to_b64(img: Image.Image, fmt="JPEG") -> str:
@@ -63,38 +125,31 @@ def predict():
 
     h, w = img.shape[:2]
 
-    # Run YOLO
-    results = yolo.predict(
-        source=img,
-        conf=conf_thresh,
-        iou=0.45,
-        imgsz=640,
-        verbose=False,
-    )
-
     # Draw detections
     annotated = img.copy()
     detections = []
 
-    for r in results:
-        for box in r.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            confidence = float(box.conf[0])
+    dets = detect_tiled(yolo, img, tile=640, overlap=128, conf=conf_thresh)
+    if len(dets) > 10:
+        dets = dets[dets[:, 4].argsort()[::-1][:10]]
+    for x1, y1, x2, y2, confidence in dets:
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        confidence = float(confidence)
 
-            # Draw red box + label
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 220), 3)
-            label = f"Waldo  {confidence:.0%}"
-            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-            cv2.rectangle(annotated, (x1, y1 - th - 10), (x1 + tw + 8, y1), (0, 0, 220), -1)
-            cv2.putText(annotated, label, (x1 + 4, y1 - 6),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        # Draw red box + label
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 220), 3)
+        label = f"Waldo  {confidence:.0%}"
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+        cv2.rectangle(annotated, (x1, y1 - th - 10), (x1 + tw + 8, y1), (0, 0, 220), -1)
+        cv2.putText(annotated, label, (x1 + 4, y1 - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-            detections.append({
-                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-                "confidence": round(confidence, 3),
-                "cx": (x1 + x2) // 2,
-                "cy": (y1 + y2) // 2,
-            })
+        detections.append({
+            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "confidence": round(confidence, 3),
+            "cx": (x1 + x2) // 2,
+            "cy": (y1 + y2) // 2,
+        })
 
     return jsonify({
         "found": len(detections) > 0,
