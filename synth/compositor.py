@@ -30,7 +30,8 @@ def rotate_scale(rgba, angle, scale):
 
 
 def tight_bbox(alpha):
-    ys, xs = np.where(alpha > 20)
+    # use a higher alpha cutoff so the box hugs waldo instead of the soft edges
+    ys, xs = np.where(alpha > 128)
     if xs.size == 0:
         return None
     return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
@@ -73,7 +74,8 @@ def stripe_distractor(size, rng):
 
 
 class Compositor:
-    def __init__(self, fg_dir, seed=42, waldo_min_frac=0.05, waldo_max_frac=0.22):
+    # let waldo be smaller here, closer to how tiny he actually is in the puzzles
+    def __init__(self, fg_dir, seed=42, waldo_min_frac=0.015, waldo_max_frac=0.22):
         self.fgs = self._curate(sorted(Path(fg_dir).glob("*.png")))
         if not self.fgs:
             raise RuntimeError(f"no usable foregrounds in {fg_dir}")
