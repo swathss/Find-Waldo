@@ -1,7 +1,7 @@
 """
 Benchmarks model performance across the full test set and prints a summary table.
 
-Metrics per confidence threshold (0.1 → 0.9):
+Metrics per confidence threshold (0.1 -> 0.9):
   Precision, Recall, F1, mAP@0.5
 
 Run after training:
@@ -40,7 +40,7 @@ def main():
 
     out = ROOT / "results" / "benchmark.json"
     out.write_text(json.dumps(rows, indent=2))
-    print(f"\nFull results saved → {out}")
+    print(f"\nFull results saved -> {out}")
 
 
 if __name__ == "__main__":

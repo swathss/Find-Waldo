@@ -6,7 +6,7 @@ YOLO label format (one .txt per image, same stem):
 
 We have two raw sources:
   A. HereIsWally: full scenes + CSV bboxes (annotations/annotations.csv)
-  B. Hey-Waldo 64×64 patches → each positive patch is a full image,
+  B. Hey-Waldo 64x64 patches -> each positive patch is a full image,
        bbox = whole frame
 
 The final split is 70 / 15 / 15  (train / val / test).
@@ -89,7 +89,7 @@ def collect_heywaldo():
         return []
     samples = []
     for img_path in sorted(base.glob("*.jpg")):
-        # Entire 64×64 patch is Waldo → bbox covers whole image
+        # Entire 64x64 patch is Waldo -> bbox covers whole image
         lines = [yolo_line(0.5, 0.5, 1.0, 1.0)]
         samples.append((img_path, lines))
     print(f"  Hey-Waldo positive patches   : {len(samples)}")
@@ -131,7 +131,7 @@ names: ['waldo']
 # main
 
 def main():
-    print("Collecting samples…")
+    print("Collecting samples...")
     all_samples = collect_hereiswally() + collect_heywaldo()
 
     if not all_samples:
@@ -151,7 +151,7 @@ def main():
         "test":  all_samples[n_train + n_val :],
     }
 
-    print(f"\nWriting {n} samples → train/val/test…")
+    print(f"\nWriting {n} samples -> train/val/test...")
     for name, subset in splits.items():
         write_split(subset, name)
 

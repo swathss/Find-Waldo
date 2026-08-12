@@ -147,6 +147,20 @@
       color: var(--muted);
     }
     .btn-ghost:hover { border-color: var(--light); color: var(--light); }
+    .btn-ghost.on {
+      background: rgba(230,57,70,0.12);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    #enhance-method {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
 
     /* Preview strip */
     #preview-strip {
@@ -326,6 +340,11 @@
         <input type="range" id="conf-slider" min="0.05" max="0.90" step="0.05" value="0.25" />
         <span id="conf-val">25%</span>
       </div>
+      <button class="btn btn-ghost" id="enhance-btn" aria-pressed="false" title="Upscale and sharpen the image before searching. Useful for small or blurry uploads.">✨ Enhance image</button>
+      <select id="enhance-method" title="How to enhance the image before searching">
+        <option value="builtin">Sharpen + upscale (fast)</option>
+        <option value="ai">AI super-resolution (Real-ESRGAN)</option>
+      </select>
       <button class="btn btn-ghost" id="clear-btn" style="display:none">✕ Clear</button>
       <button class="btn btn-primary" id="find-btn" disabled>
         <span>🔍</span> Find Waldo
@@ -336,7 +355,7 @@
   <!-- Spinner -->
   <div id="spinner">
     <div class="spin"></div>
-    <p style="color:var(--muted)">Searching for Waldo…</p>
+    <p style="color:var(--muted)">Searching for Waldo...</p>
   </div>
 
   <!-- Error -->
@@ -399,15 +418,24 @@
   const confVal    = document.getElementById('conf-val');
   const findBtn    = document.getElementById('find-btn');
   const clearBtn   = document.getElementById('clear-btn');
+  const enhanceBtn = document.getElementById('enhance-btn');
   const spinner    = document.getElementById('spinner');
   const errorBox   = document.getElementById('error-box');
   const resultCard = document.getElementById('result-card');
 
   let selectedFile = null;
+  let enhanceOn = false;
 
   // Confidence slider
   confSlider.addEventListener('input', () => {
     confVal.textContent = Math.round(confSlider.value * 100) + '%';
+  });
+
+  // Enhance toggle
+  enhanceBtn.addEventListener('click', () => {
+    enhanceOn = !enhanceOn;
+    enhanceBtn.classList.toggle('on', enhanceOn);
+    enhanceBtn.setAttribute('aria-pressed', enhanceOn);
   });
 
   // Drag & drop
@@ -470,6 +498,8 @@
     const form = new FormData();
     form.append('image', selectedFile);
     form.append('conf', confSlider.value);
+    form.append('enhance', enhanceOn);
+    form.append('method', document.getElementById('enhance-method').value);
 
     try {
       const res = await fetch('/predict', { method: 'POST', body: form });
@@ -488,7 +518,7 @@
   });
 
   function showError(msg) {
-    errorBox.textContent = '⚠️  ' + msg;
+    errorBox.textContent = 'warning️  ' + msg;
     errorBox.style.display = 'block';
   }
 
@@ -496,7 +526,7 @@
     // Badge
     const badge = document.getElementById('result-badge');
     if (data.found) {
-      badge.innerHTML = `<span class="badge badge-found">✅ Waldo Found!</span>`;
+      badge.innerHTML = `<span class="badge badge-found">ok Waldo Found!</span>`;
     } else {
       badge.innerHTML = `<span class="badge badge-notfound">❌ Waldo Not Found</span>`;
     }
@@ -507,7 +537,7 @@
       ? Math.round(Math.max(...data.detections.map(d => d.confidence)) * 100) + '%'
       : '-';
     document.getElementById('stat-conf').textContent = bestConf;
-    document.getElementById('stat-size').textContent = `${data.image_w}×${data.image_h}`;
+    document.getElementById('stat-size').textContent = `${data.image_w}x${data.image_h}`;
 
     // Images
     document.getElementById('result-img').src   = 'data:image/jpeg;base64,' + data.result_image;
@@ -530,7 +560,7 @@
           <div class="det-item">
             <div class="det-num">${i+1}</div>
             <div>
-              <div>Box (${d.x1}, ${d.y1}) → (${d.x2}, ${d.y2})</div>
+              <div>Box (${d.x1}, ${d.y1}) -> (${d.x2}, ${d.y2})</div>
               <div style="color:var(--muted);font-size:0.8rem">Centre: (${d.cx}, ${d.cy})</div>
             </div>
             <div class="conf-bar"><div class="conf-bar-fill" style="width:${pct}%"></div></div>

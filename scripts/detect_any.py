@@ -71,6 +71,24 @@ def detect(model, img, tile=640, overlap=128, conf=0.25, device="cpu"):
     return np.concatenate([boxes[keep], scores[keep, None]], axis=1)
 
 
+def enhance_image(img, min_side=1500, max_side=4000):
+    # clean up and enlarge the image so a small or soft waldo survives detection.
+    # only runs when --enhance is passed.
+    h, w = img.shape[:2]
+    short = min(h, w)
+
+    # denoise while the image is still small (faster), then upscale, then sharpen
+    img = cv2.fastNlMeansDenoisingColored(img, None, 3, 3, 7, 21)
+    if short < min_side:
+        scale = min(min_side / short, max_side / max(h, w))
+        if scale > 1.01:
+            img = cv2.resize(img, (round(w * scale), round(h * scale)),
+                             interpolation=cv2.INTER_LANCZOS4)
+    soft = cv2.GaussianBlur(img, (0, 0), 1.2)
+    img = cv2.addWeighted(img, 1.6, soft, -0.6, 0)
+    return img
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--image", required=True)
@@ -80,6 +98,7 @@ def main():
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--out", default=str(ROOT / "results" / "detect_any.jpg"))
     ap.add_argument("--topk", type=int, default=5)
+    ap.add_argument("--enhance", action="store_true", help="upscale and sharpen the image before detection")
     args = ap.parse_args()
 
     weights = Path(args.weights)
@@ -89,6 +108,10 @@ def main():
     img = cv2.imread(args.image)
     if img is None:
         raise FileNotFoundError(f"cannot read {args.image}")
+
+    if args.enhance:
+        img = enhance_image(img)
+        print(f"enhanced image -> {img.shape[1]}x{img.shape[0]}")
 
     device = pick_device()
     model = YOLO(str(weights))

@@ -2,10 +2,10 @@
 Step 4: Evaluate the trained model on the held-out test set.
 
 Reports:
-  • mAP@0.5    (mean Average Precision at IoU threshold 0.5)
-  • Precision
-  • Recall
-  • F1 score
+  - mAP@0.5    (mean Average Precision at IoU threshold 0.5)
+  - Precision
+  - Recall
+  - F1 score
 
 Reference: YOLO evaluation docs
   https://docs.ultralytics.com/modes/val/

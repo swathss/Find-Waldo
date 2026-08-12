@@ -1,6 +1,6 @@
 """
 Alternative dataset prep: instead of feeding full scenes to YOLO,
-extract 640×640 crops centered on Waldo's ground-truth location.
+extract 640x640 crops centered on Waldo's ground-truth location.
 
 This gives the model a consistent, detectable Waldo size (~32-80px in 640px)
 instead of the ~10px Waldo that appears when full 2048px scenes are resized.
@@ -54,7 +54,7 @@ def collect():
             xmax = float(row["xmax"]); ymax = float(row["ymax"])
             wcx  = (xmin + xmax) / 2;  wcy = (ymin + ymax) / 2
 
-            # Center a TILE×TILE crop on Waldo
+            # Center a TILExTILE crop on Waldo
             x1 = int(max(0, wcx - TILE / 2))
             y1 = int(max(0, wcy - TILE / 2))
             x2 = min(iw, x1 + TILE)
@@ -110,7 +110,7 @@ def main():
         "test":  samples[n_train + n_val:],
     }
 
-    print(f"\nWriting {n} tile-crops…")
+    print(f"\nWriting {n} tile-crops...")
     for name, subset in splits.items():
         write_split(subset, name, PROC)
 

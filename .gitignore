@@ -23,3 +23,11 @@ env/
 .DS_Store
 .idea/
 .vscode/
+
+# training ops helper (not part of the deliverable)
+train_until_done.sh
+waldo_train.log
+
+# packaged archives (too large for git; keep local)
+data.zip
+models.zip

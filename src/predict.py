@@ -58,7 +58,7 @@ def predict_yolo(image_path: Path, conf: float = 0.25):
 
     out_path = RESULTS / f"yolo_{image_path.name}"
     cv2.imwrite(str(out_path), img)
-    print(f"  Saved → {out_path}")
+    print(f"  Saved -> {out_path}")
 
 
 # Template-matching baseline (no ML)
@@ -73,7 +73,7 @@ def predict_template(image_path: Path, template_path: Path = None):
         print("  [template] Waldo patches not found; skipping baseline.")
         return
 
-    # Build mean template from all 64×64 patches
+    # Build mean template from all 64x64 patches
     patches = list(waldo_patches_dir.glob("*.jpg"))[:30]  # use up to 30
     templates = []
     for p in patches:
@@ -102,7 +102,7 @@ def predict_template(image_path: Path, template_path: Path = None):
 
     out_path = RESULTS / f"template_{image_path.name}"
     cv2.imwrite(str(out_path), scene)
-    print(f"  Saved → {out_path}")
+    print(f"  Saved -> {out_path}")
 
 
 # CLI
@@ -122,11 +122,11 @@ def main():
     print(f"\nRunning on: {image_path.name}")
     print("-" * 50)
 
-    print("\n[1/2] YOLO inference…")
+    print("\n[1/2] YOLO inference...")
     predict_yolo(image_path, conf=args.conf)
 
     if args.baseline:
-        print("\n[2/2] Template-matching baseline…")
+        print("\n[2/2] Template-matching baseline...")
         predict_template(image_path)
 
 

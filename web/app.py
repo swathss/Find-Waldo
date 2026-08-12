@@ -24,7 +24,7 @@ FALLBACK= ROOT / "models/waldo_synth/weights/best.pt"
 model_path = MODEL if MODEL.exists() else FALLBACK
 print(f"Loading model: {model_path}")
 yolo = YOLO(str(model_path))
-print("Model ready ✓")
+print("Model ready ok")
 
 
 def _nms(dets, iou_thresh=0.45):
@@ -89,6 +89,60 @@ def detect_tiled(model, img, tile=640, overlap=128, conf=0.25):
     return _nms(dets)
 
 
+def enhance_image(img, min_side=1500, max_side=4000):
+    # clean up and enlarge the image so a small or soft waldo survives detection.
+    # only runs when the user turns on the enhance toggle.
+    h, w = img.shape[:2]
+    short = min(h, w)
+
+    # denoise while the image is still small (faster), then upscale, then sharpen
+    img = cv2.fastNlMeansDenoisingColored(img, None, 3, 3, 7, 21)
+    if short < min_side:
+        scale = min(min_side / short, max_side / max(h, w))
+        if scale > 1.01:
+            img = cv2.resize(img, (round(w * scale), round(h * scale)),
+                             interpolation=cv2.INTER_LANCZOS4)
+    soft = cv2.GaussianBlur(img, (0, 0), 1.2)
+    img = cv2.addWeighted(img, 1.6, soft, -0.6, 0)
+    return img
+
+
+# Real-ESRGAN super-resolution, loaded lazily the first time it is used.
+SR_WEIGHTS = ROOT / "models/sr/RealESRGAN_x4plus_anime_6B.pth"
+_sr_model = None
+
+
+def _load_sr():
+    global _sr_model
+    if _sr_model is None:
+        import torch
+        from spandrel import ModelLoader, ImageModelDescriptor
+        dev = "mps" if torch.backends.mps.is_available() else \
+              ("cuda" if torch.cuda.is_available() else "cpu")
+        m = ModelLoader().load_from_file(str(SR_WEIGHTS))
+        if not isinstance(m, ImageModelDescriptor):
+            raise RuntimeError("unexpected model type")
+        _sr_model = (m.to(dev).eval(), dev)
+    return _sr_model
+
+
+def super_resolve(img, max_long=3000):
+    # run Real-ESRGAN, then cap the long side so detection stays reasonably fast
+    import torch
+    model, dev = _load_sr()
+    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    t = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).to(dev)
+    with torch.no_grad():
+        out = model(t).clamp(0, 1).squeeze(0).permute(1, 2, 0).cpu().numpy()
+    sr = cv2.cvtColor((out * 255).round().astype(np.uint8), cv2.COLOR_RGB2BGR)
+    long_side = max(sr.shape[:2])
+    if long_side > max_long:
+        s = max_long / long_side
+        sr = cv2.resize(sr, (round(sr.shape[1] * s), round(sr.shape[0] * s)),
+                        interpolation=cv2.INTER_AREA)
+    return sr
+
+
 def pil_to_b64(img: Image.Image, fmt="JPEG") -> str:
     buf = io.BytesIO()
     img.save(buf, format=fmt, quality=90)
@@ -116,6 +170,8 @@ def predict():
         return jsonify({"error": "Empty filename"}), 400
 
     conf_thresh = float(request.form.get("conf", 0.25))
+    do_enhance = request.form.get("enhance", "false") == "true"
+    method = request.form.get("method", "builtin")
 
     # Read image
     file_bytes = np.frombuffer(file.read(), np.uint8)
@@ -123,6 +179,22 @@ def predict():
     if img is None:
         return jsonify({"error": "Could not read image"}), 400
 
+    # keep the true upload for the "before" image, enhance only if asked to
+    original = img.copy()
+    was_enhanced = False
+    enhance_method = None
+    if do_enhance:
+        if method == "ai" and SR_WEIGHTS.exists():
+            try:
+                img = super_resolve(img)
+                enhance_method = "ai"
+            except Exception:
+                img = enhance_image(img)      # fall back if the SR model fails
+                enhance_method = "builtin (AI unavailable)"
+        else:
+            img = enhance_image(img)
+            enhance_method = "builtin"
+        was_enhanced = True
     h, w = img.shape[:2]
 
     # Draw detections
@@ -157,8 +229,10 @@ def predict():
         "detections": detections,
         "image_w": w,
         "image_h": h,
+        "enhanced": was_enhanced,
+        "enhance_method": enhance_method,
         "result_image": cv2_to_b64(annotated),
-        "original_image": cv2_to_b64(img),
+        "original_image": cv2_to_b64(original),
     })
 
 

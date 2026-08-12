@@ -5,7 +5,7 @@ The problem: Waldo is ~0.01-0.07% of the scene image, so after YOLO resizes
 to 640px he shrinks to just 3-15 pixels, making reliable detection
 nearly impossible.
 
-The fix: Slice the scene into overlapping 640×640 tiles, run YOLO on each,
+The fix: Slice the scene into overlapping 640x640 tiles, run YOLO on each,
 then merge the detections back into scene coordinates using NMS.
 
 Credit: tiling strategy inspired by SAHI (Slicing Aided Hyper Inference)
@@ -71,7 +71,7 @@ def predict_tiled(image_path: Path, tile_size: int = 640,
         return
 
     h, w = img.shape[:2]
-    print(f"  Scene size : {w}×{h}")
+    print(f"  Scene size : {w}x{h}")
 
     all_boxes, all_scores = [], []
 
@@ -95,7 +95,7 @@ def predict_tiled(image_path: Path, tile_size: int = 640,
     scores = np.array(all_scores)
     keep   = nms(boxes, scores, iou_threshold=0.4)
 
-    print(f"  Detections : {len(all_boxes)} raw → {len(keep)} after NMS")
+    print(f"  Detections : {len(all_boxes)} raw -> {len(keep)} after NMS")
 
     vis = img.copy()
     for i in keep:
@@ -108,7 +108,7 @@ def predict_tiled(image_path: Path, tile_size: int = 640,
 
     out = RESULTS / f"tiled_{image_path.name}"
     cv2.imwrite(str(out), vis)
-    print(f"  Saved → {out}")
+    print(f"  Saved -> {out}")
 
 
 def main():
