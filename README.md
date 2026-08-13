@@ -1,4 +1,4 @@
-# Find Waldo
+# Find Waldo(If you can!)
 
 Detect Waldo in "Where's Waldo?" puzzle pages with a YOLOv8 detector, including
 pages the model never trained on. The detector is standard; the work is in the
