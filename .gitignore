@@ -38,3 +38,6 @@ poster_deliverables/figures/*.jpg
 poster_deliverables/figures/*.jpeg
 poster_deliverables/result_images/*/*.jpg
 poster_deliverables/result_images/*/*.jpeg
+
+# poster deliverables: local only (shared with a friend, not for git)
+poster_deliverables/

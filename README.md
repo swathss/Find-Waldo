@@ -97,6 +97,14 @@ seen in training): 21 pages, 58 Waldo instances (small, so treat as
 directional). Page hit-rate = does the top-1 box land on the real Waldo,
 IoU >= 0.5. Confidence intervals are 95% Wilson score intervals.
 
+<p align="center"><img src="docs/images/eval_metrics.gif" width="88%" alt="Key metrics: page hit-rate 0.76, precision 0.79, tile mAP 0.66, recall 0.57"></p>
+
+Performance in metric space: each model is a point at (Precision, Recall,
+mAP@0.5). The trajectory climbs from the synthetic baseline near the origin to
+the reported decoy model.
+
+<p align="center"><img src="docs/images/eval_3d.gif" width="58%" alt="Rotating 3D plot of precision, recall and mAP per model"></p>
+
 ### Lineage (how the result was built up)
 
 | Stage | Page hit-rate | 95% CI |
@@ -109,6 +117,20 @@ IoU >= 0.5. Confidence intervals are 95% Wilson score intervals.
 The large, defensible jump is synthetic (0.00) to real page tiles (0.48). At
 n=21 the single-step increments have overlapping CIs, so the honest claim is the
 cumulative 0.00 to 0.76.
+
+<p align="center"><img src="docs/images/eval_heatmap.gif" width="56%" alt="Detection confidence heatmap scanning a page and locking onto Waldo"></p>
+
+The detector scans the page in overlapping tiles and builds a confidence
+heatmap that concentrates on the real Waldo (sports-stadium page from the
+held-out book b09). The table above is the measured improvement; this shows the
+model in action.
+
+Validation mAP@0.5 during training for the three book-tile models (same held-out
+books b11/b16). All converge. The multi-scale model has the highest validation
+mAP, but the reported metric is the test page hit-rate above, where the decoy
+model leads.
+
+<p align="center"><img src="docs/images/eval_training_curves.png" width="72%" alt="Training validation mAP@0.5 curves"></p>
 
 ### Decoy hard-negatives ablation (tile level, single-scale)
 
