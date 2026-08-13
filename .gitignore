@@ -1,11 +1,9 @@
-# --- data & generated artefacts (regenerable, large) ---
+# --- data & generated artefacts (regenerable, large, or copyrighted scans) ---
 data/
-assets/foregrounds/
-assets/backgrounds/
+assets/
 models/
 runs/
-results/*.jpg
-results/*.png
+results/
 
 # --- model weights ---
 *.pt
@@ -31,3 +29,12 @@ waldo_train.log
 # packaged archives (too large for git; keep local)
 data.zip
 models.zip
+poster_deliverables.zip
+
+# poster deliverables: keep text, csv and generated charts; exclude model
+# weights and copyrighted book-page images (kept local)
+poster_deliverables/weights/
+poster_deliverables/figures/*.jpg
+poster_deliverables/figures/*.jpeg
+poster_deliverables/result_images/*/*.jpg
+poster_deliverables/result_images/*/*.jpeg

@@ -1,583 +1,354 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Find Waldo · AI</title>
-  <style>
-    /* Reset & base */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find Waldo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F1E6; --card:#FFFFFF; --ink:#17233F; --muted:#6E7488;
+    --red:#E23B2E; --red-dark:#C22B20; --yellow:#F4C23A; --blue:#2C7FB8;
+    --line:#E7E0CF; --ok:#1E9E6A;
+    --shadow:0 1px 0 rgba(23,35,63,.04), 0 12px 30px -18px rgba(23,35,63,.35);
+    --r:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font-family:Inter,system-ui,sans-serif;line-height:1.5;
+       -webkit-font-smoothing:antialiased}
+  .stripe{height:10px;background:repeating-linear-gradient(-45deg,var(--red) 0 14px,#fff 14px 28px)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px}
 
-    :root {
-      --red:    #e63946;
-      --white:  #f1faee;
-      --navy:   #1d3557;
-      --blue:   #457b9d;
-      --light:  #a8dadc;
-      --bg:     #0f172a;
-      --card:   #1e293b;
-      --border: #334155;
-      --text:   #e2e8f0;
-      --muted:  #94a3b8;
-    }
+  header{padding:34px 0 22px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .lens{width:46px;height:46px;border-radius:50%;border:5px solid var(--ink);
+        position:relative;flex:none;background:#fff}
+  .lens::after{content:"";position:absolute;width:16px;height:5px;background:var(--ink);
+        border-radius:3px;right:-11px;bottom:-1px;transform:rotate(45deg)}
+  h1{font-family:"Baloo 2",sans-serif;font-weight:800;font-size:40px;letter-spacing:-.5px;
+     margin:0;line-height:1}
+  .tag{color:var(--muted);font-size:14px;margin-top:6px}
 
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+  .step{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+        box-shadow:var(--shadow);padding:22px 24px;margin:16px 0}
+  .step[hidden]{display:none}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .num{width:28px;height:28px;flex:none;border-radius:50%;background:var(--red);color:#fff;
+       font-family:"Baloo 2";font-weight:700;font-size:15px;display:grid;place-items:center}
+  .head h2{font-family:"Baloo 2";font-weight:700;font-size:20px;margin:0}
+  .head .hint{margin-left:auto;color:var(--muted);font-size:13px}
 
-    /* Header */
-    header {
-      background: linear-gradient(135deg, var(--navy) 0%, #0f172a 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 1.2rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .logo {
-      font-size: 2rem;
-      animation: wave 2s infinite;
-    }
-    @keyframes wave {
-      0%,100% { transform: rotate(0deg); }
-      25%  { transform: rotate(15deg); }
-      75%  { transform: rotate(-10deg); }
-    }
-    header h1 {
-      font-size: 1.6rem;
-      font-weight: 800;
-      background: linear-gradient(90deg, var(--red), var(--light));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    header p { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  /* upload */
+  .drop{border:2px dashed #CDBF9E;border-radius:12px;padding:40px 20px;text-align:center;
+        cursor:pointer;transition:.15s;background:#FCFAF3}
+  .drop:hover,.drop.over{border-color:var(--red);background:#fff}
+  .drop .big{font-family:"Baloo 2";font-weight:700;font-size:18px}
+  .drop .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .drop .ico{font-size:34px}
 
-    /* Main layout */
-    main {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2.5rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
+  /* segmented enhance options */
+  .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .opt{border:1.5px solid var(--line);border-radius:11px;padding:12px 14px;cursor:pointer;
+       background:#FCFAF3;transition:.15s}
+  .opt:hover{border-color:#CDBF9E}
+  .opt.sel{border-color:var(--red);background:#fff;box-shadow:0 0 0 3px rgba(226,59,46,.12)}
+  .opt .t{font-weight:600;font-size:14px}
+  .opt .d{color:var(--muted);font-size:12px;margin-top:3px}
+  .enh-row{display:flex;align-items:center;gap:12px;margin-top:16px}
 
-    /* Upload card */
-    .upload-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 1.2rem;
-      padding: 2rem;
-    }
-    .upload-card h2 { font-size: 1.1rem; margin-bottom: 1.2rem; color: var(--light); }
+  /* before/after */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  .ba figure{margin:0}
+  .ba figcaption{font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;
+       text-transform:uppercase;letter-spacing:.04em}
+  .ba img{width:100%;border:1px solid var(--line);border-radius:10px;display:block}
 
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 1rem;
-      padding: 3rem 2rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: rgba(255,255,255,0.02);
-      position: relative;
-    }
-    .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--red);
-      background: rgba(230,57,70,0.06);
-    }
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
-    .drop-icon { font-size: 3.5rem; margin-bottom: 0.8rem; }
-    .drop-zone p { color: var(--muted); font-size: 0.95rem; }
-    .drop-zone strong { color: var(--red); }
+  /* confidence */
+  .conf{display:flex;align-items:center;gap:16px}
+  .conf input[type=range]{flex:1;accent-color:var(--red);height:4px}
+  .conf .val{font-family:"Space Mono";font-weight:700;font-size:18px;color:var(--red);
+       min-width:52px;text-align:right}
 
-    /* Controls */
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-top: 1.4rem;
-    }
-    .conf-control {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      flex: 1;
-      min-width: 200px;
-    }
-    .conf-control label { font-size: 0.88rem; color: var(--muted); white-space: nowrap; }
-    input[type="range"] {
-      flex: 1;
-      accent-color: var(--red);
-      cursor: pointer;
-    }
-    #conf-val {
-      font-weight: 700;
-      color: var(--red);
-      min-width: 38px;
-      text-align: right;
-    }
+  /* buttons */
+  .btn{font-family:Inter;font-weight:600;font-size:15px;border-radius:11px;padding:12px 20px;
+       border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.15s}
+  .btn:hover{border-color:#CDBF9E}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{border:none;color:#fff;background:var(--red);box-shadow:0 8px 18px -8px rgba(226,59,46,.7)}
+  .btn-primary:hover{background:var(--red-dark)}
+  .find{width:100%;font-family:"Baloo 2";font-weight:700;font-size:20px;padding:16px}
+  .find .st{display:inline-block;height:14px;width:44px;vertical-align:-2px;margin-right:10px;border-radius:3px;
+       background:repeating-linear-gradient(-45deg,#fff 0 6px,var(--red) 6px 12px);border:2px solid #fff}
 
-    .btn {
-      padding: 0.75rem 2rem;
-      border-radius: 0.6rem;
-      border: none;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .btn-primary {
-      background: var(--red);
-      color: #fff;
-    }
-    .btn-primary:hover { background: #c1121f; transform: translateY(-1px); }
-    .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .btn-ghost:hover { border-color: var(--light); color: var(--light); }
-    .btn-ghost.on {
-      background: rgba(230,57,70,0.12);
-      border-color: var(--red);
-      color: var(--red);
-    }
-    #enhance-method {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 0.6rem;
-      padding: 0.6rem 0.8rem;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
+  /* result */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+  .stat{text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:11px;background:#FCFAF3}
+  .stat .n{font-family:"Baloo 2";font-weight:800;font-size:24px;line-height:1}
+  .stat .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-family:"Baloo 2";font-weight:700;
+       padding:7px 14px;border-radius:999px;font-size:15px}
+  .badge.yes{background:#E3F4EC;color:var(--ok)}
+  .badge.no{background:#FBE9E7;color:var(--red-dark)}
+  .toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:14px 0}
+  .toggle button{border:none;background:#fff;padding:7px 16px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
+  .toggle button.on{background:var(--ink);color:#fff}
+  .imgbox{position:relative;line-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .imgbox img{width:100%;display:block}
+  .obox{position:absolute;border:3px solid var(--red);border-radius:3px;box-sizing:border-box;pointer-events:none}
+  .obox.alt{border-color:#E8912E}
+  .obox .olab{position:absolute;top:-20px;left:-3px;background:var(--red);color:#fff;
+       font:700 11px/1.6 "Space Mono";padding:0 6px;border-radius:4px;white-space:nowrap}
+  .obox.alt .olab{background:#E8912E}
+  .dets{margin-top:18px;border-top:1px solid var(--line);padding-top:8px}
+  .det{display:flex;align-items:center;gap:12px;padding:9px 10px;margin:0 -10px;
+       cursor:pointer;border-radius:9px;transition:background .12s}
+  .det:hover{background:#FBF6EA}
+  .det.sel{background:#FFF0EE}
+  .det.sel .rk{box-shadow:0 0 0 3px rgba(226,59,46,.22)}
+  .det .rk{width:24px;height:24px;flex:none;border-radius:50%;background:var(--red);color:#fff;
+       font-family:"Space Mono";font-weight:700;font-size:12px;display:grid;place-items:center}
+  .det .co{font-family:"Space Mono";font-size:12px;color:var(--muted);flex:1}
+  .det .bar{width:120px;height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+  .det .bar i{display:block;height:100%;background:var(--red)}
+  .det .pc{font-family:"Space Mono";font-weight:700;font-size:13px;min-width:42px;text-align:right}
 
-    /* Preview strip */
-    #preview-strip {
-      display: none;
-      margin-top: 1rem;
-      border-radius: 0.8rem;
-      overflow: hidden;
-      max-height: 180px;
-      background: rgba(0,0,0,0.3);
-      text-align: center;
-    }
-    #preview-strip img { max-height: 180px; max-width: 100%; object-fit: contain; }
-
-    /* Spinner */
-    #spinner {
-      display: none;
-      text-align: center;
-      padding: 2rem;
-    }
-    .spin {
-      width: 52px; height: 52px;
-      border: 4px solid var(--border);
-      border-top-color: var(--red);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 1rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Result card */
-    #result-card {
-      display: none;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 1.2rem;
-      overflow: hidden;
-    }
-
-    .result-header {
-      padding: 1.2rem 1.8rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.4rem 1rem;
-      border-radius: 99px;
-      font-weight: 700;
-      font-size: 1rem;
-    }
-    .badge-found { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid #4ade8044; }
-    .badge-notfound { background: rgba(230,57,70,0.15); color: var(--red); border: 1px solid var(--red)44; }
-
-    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-    .stat { text-align: center; }
-    .stat .val { font-size: 1.5rem; font-weight: 800; color: var(--light); }
-    .stat .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-
-    /* Image viewer */
-    .img-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-    }
-    .img-tab {
-      padding: 0.8rem 1.5rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: var(--muted);
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-      background: none;
-      border-top: none;
-      border-left: none;
-      border-right: none;
-    }
-    .img-tab:hover { color: var(--text); }
-    .img-tab.active { color: var(--red); border-bottom-color: var(--red); }
-
-    .img-panel { display: none; padding: 1.5rem; text-align: center; }
-    .img-panel.active { display: block; }
-    .img-panel img {
-      max-width: 100%;
-      max-height: 70vh;
-      border-radius: 0.6rem;
-      object-fit: contain;
-      box-shadow: 0 4px 32px rgba(0,0,0,0.5);
-    }
-
-    /* Detections list */
-    #det-list {
-      padding: 1.2rem 1.8rem;
-      border-top: 1px solid var(--border);
-      display: none;
-    }
-    #det-list h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.8rem; }
-    .det-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.6rem 0.8rem;
-      border-radius: 0.5rem;
-      background: rgba(255,255,255,0.03);
-      margin-bottom: 0.5rem;
-      font-size: 0.88rem;
-    }
-    .det-num {
-      width: 24px; height: 24px;
-      background: var(--red);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.75rem; color: #fff; flex-shrink: 0;
-    }
-    .det-conf { margin-left: auto; font-weight: 700; color: #4ade80; }
-    .conf-bar {
-      flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-    }
-    .conf-bar-fill { height: 100%; background: #4ade80; border-radius: 2px; }
-
-    /* Error banner */
-    #error-box {
-      display: none;
-      background: rgba(230,57,70,0.1);
-      border: 1px solid var(--red);
-      border-radius: 0.8rem;
-      padding: 1rem 1.5rem;
-      color: var(--red);
-    }
-
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 2rem;
-      color: var(--muted);
-      font-size: 0.8rem;
-      border-top: 1px solid var(--border);
-    }
-    footer a { color: var(--blue); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);
+       border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{background:#FBE9E7;color:var(--red-dark);border-radius:10px;padding:10px 14px;font-size:14px;margin-top:12px}
+  @media (max-width:640px){.seg{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.ba{grid-template-columns:1fr}h1{font-size:32px}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
 <body>
-
-<header>
-  <div class="logo">🔍</div>
-  <div>
-    <h1>Find Waldo · AI</h1>
-    <p>YOLOv8 detector · trained on a synthetic data engine</p>
-  </div>
-</header>
-
-<main>
-
-  <!-- Upload card -->
-  <div class="upload-card">
-    <h2>Upload a Where's Waldo image</h2>
-
-    <div class="drop-zone" id="drop-zone">
-      <input type="file" id="file-input" accept="image/*" />
-      <div class="drop-icon">🖼️</div>
-      <p><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p style="margin-top:0.4rem; font-size:0.82rem;">JPG, PNG, WebP (max 20 MB)</p>
-    </div>
-
-    <div id="preview-strip">
-      <img id="preview-img" src="" alt="preview" />
-    </div>
-
-    <div class="controls">
-      <div class="conf-control">
-        <label for="conf-slider">Confidence threshold</label>
-        <input type="range" id="conf-slider" min="0.05" max="0.90" step="0.05" value="0.25" />
-        <span id="conf-val">25%</span>
-      </div>
-      <button class="btn btn-ghost" id="enhance-btn" aria-pressed="false" title="Upscale and sharpen the image before searching. Useful for small or blurry uploads.">✨ Enhance image</button>
-      <select id="enhance-method" title="How to enhance the image before searching">
-        <option value="builtin">Sharpen + upscale (fast)</option>
-        <option value="ai">AI super-resolution (Real-ESRGAN)</option>
-      </select>
-      <button class="btn btn-ghost" id="clear-btn" style="display:none">✕ Clear</button>
-      <button class="btn btn-primary" id="find-btn" disabled>
-        <span>🔍</span> Find Waldo
-      </button>
-    </div>
-  </div>
-
-  <!-- Spinner -->
-  <div id="spinner">
-    <div class="spin"></div>
-    <p style="color:var(--muted)">Searching for Waldo...</p>
-  </div>
-
-  <!-- Error -->
-  <div id="error-box"></div>
-
-  <!-- Result card -->
-  <div id="result-card">
-    <div class="result-header">
-      <div id="result-badge"></div>
-      <div class="stats">
-        <div class="stat">
-          <div class="val" id="stat-count">-</div>
-          <div class="lbl">detections</div>
-        </div>
-        <div class="stat">
-          <div class="val" id="stat-conf">-</div>
-          <div class="lbl">best confidence</div>
-        </div>
-        <div class="stat">
-          <div class="val" id="stat-size">-</div>
-          <div class="lbl">image size</div>
-        </div>
+<div class="stripe"></div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="lens"></div>
+      <div>
+        <h1>Find Waldo</h1>
+        <div class="tag">YOLOv8 detector, multi-scale tiled search on the full page</div>
       </div>
     </div>
+  </header>
 
-    <div class="img-tabs">
-      <button class="img-tab active" data-panel="result">Result</button>
-      <button class="img-tab" data-panel="original">Original</button>
+  <!-- 1. upload -->
+  <section class="step">
+    <div class="head"><span class="num">1</span><h2>Upload a page</h2>
+      <span class="hint">JPG, PNG or WebP, up to 30 MB</span></div>
+    <div class="drop" id="drop">
+      <div class="ico">🔍</div>
+      <div class="big">Drop a Where's Waldo page here</div>
+      <div class="sub">or click to choose a file</div>
+      <input type="file" id="file" accept="image/*" hidden>
     </div>
+  </section>
 
-    <div class="img-panel active" id="panel-result">
-      <img id="result-img" src="" alt="Result" />
+  <!-- 2. enhance -->
+  <section class="step" id="s-enh" hidden>
+    <div class="head"><span class="num">2</span><h2>Enhance (optional)</h2>
+      <span class="hint">helps when the page is small or soft</span></div>
+    <div class="seg">
+      <div class="opt sel" data-m="none"><div class="t">Use as-is</div><div class="d">skip enhancement</div></div>
+      <div class="opt" data-m="sharpen"><div class="t">Sharpen + upscale</div><div class="d">local, fast</div></div>
+      <div class="opt" data-m="finegrain"><div class="t">AI enhancer</div><div class="d">finegrain, ~30-60s</div></div>
     </div>
-    <div class="img-panel" id="panel-original">
-      <img id="original-img" src="" alt="Original" />
+    <div class="enh-row">
+      <button class="btn btn-primary" id="enhBtn" disabled>Enhance image</button>
+      <span class="note" id="enhNote">Pick an option above, then enhance.</span>
     </div>
+    <div id="baWrap" hidden>
+      <div class="ba">
+        <figure><figcaption>Before</figcaption><img id="baBefore"></figure>
+        <figure><figcaption>After</figcaption><img id="baAfter"></figure>
+      </div>
+    </div>
+  </section>
 
-    <div id="det-list">
-      <h3>DETECTIONS</h3>
-      <div id="det-items"></div>
+  <!-- 3. confidence -->
+  <section class="step" id="s-conf" hidden>
+    <div class="head"><span class="num">3</span><h2>Confidence threshold</h2>
+      <span class="hint">lower finds more, with more false positives</span></div>
+    <div class="conf">
+      <input type="range" id="conf" min="0.05" max="0.5" step="0.01" value="0.15">
+      <span class="val" id="confVal">15%</span>
     </div>
+  </section>
+
+  <!-- find -->
+  <section class="step" id="s-find" hidden>
+    <button class="btn btn-primary find" id="findBtn"><span class="st"></span>Find Waldo</button>
+    <div id="findErr"></div>
+  </section>
+
+  <!-- result -->
+  <section class="step" id="s-res" hidden>
+    <div class="head" style="justify-content:space-between">
+      <span class="badge" id="badge"></span>
+      <span class="hint" id="resTime"></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="stCount">0</div><div class="l">detections</div></div>
+      <div class="stat"><div class="n" id="stConf">0%</div><div class="l">best confidence</div></div>
+      <div class="stat"><div class="n" id="stSize">-</div><div class="l">image size</div></div>
+      <div class="stat"><div class="n" id="stTime">-</div><div class="l">search time</div></div>
+    </div>
+    <div class="toggle">
+      <button id="tRes" class="on">Result</button>
+      <button id="tOrig">Original</button>
+    </div>
+    <div class="imgbox" id="imgbox"><img id="resImg"></div>
+    <div class="note" id="detsHint" style="margin-top:10px">Showing the top guess. Click any row below to show that box on the image.</div>
+    <div class="dets" id="dets"></div>
+  </section>
+
+  <div class="note" style="text-align:center;margin:24px 0 40px">
+    Reported model: waldo_book_decoy, 0.76 page hit-rate on held-out books.
   </div>
-
-</main>
-
-<footer>
-  Model: YOLOv8s trained on synthetic composites mined from
-  <a href="https://github.com/vc1492a/Hey-Waldo" target="_blank">Hey-Waldo</a>,
-  <a href="https://github.com/tadejmagajna/HereIsWally" target="_blank">HereIsWally</a>,
-  and Kaggle datasets · Built with
-  <a href="https://github.com/ultralytics/ultralytics" target="_blank">Ultralytics YOLOv8</a>
-</footer>
+</div>
 
 <script>
-  const dropZone   = document.getElementById('drop-zone');
-  const fileInput  = document.getElementById('file-input');
-  const previewImg = document.getElementById('preview-img');
-  const previewStrip = document.getElementById('preview-strip');
-  const confSlider = document.getElementById('conf-slider');
-  const confVal    = document.getElementById('conf-val');
-  const findBtn    = document.getElementById('find-btn');
-  const clearBtn   = document.getElementById('clear-btn');
-  const enhanceBtn = document.getElementById('enhance-btn');
-  const spinner    = document.getElementById('spinner');
-  const errorBox   = document.getElementById('error-box');
-  const resultCard = document.getElementById('result-card');
+const $ = s => document.querySelector(s);
+let originalB64 = null, currentB64 = null, resultB64 = null, method = "none";
 
-  let selectedFile = null;
-  let enhanceOn = false;
+/* ---- upload ---- */
+const drop = $("#drop"), file = $("#file");
+drop.onclick = () => file.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+file.onchange = () => file.files[0] && load(file.files[0]);
 
-  // Confidence slider
-  confSlider.addEventListener('input', () => {
-    confVal.textContent = Math.round(confSlider.value * 100) + '%';
-  });
+function load(f){
+  const r = new FileReader();
+  r.onload = () => {
+    originalB64 = r.result; currentB64 = r.result;
+    drop.innerHTML = '<img src="'+r.result+'" style="max-height:220px;border-radius:10px">' +
+                     '<div class="sub" style="margin-top:10px">'+f.name+' &middot; click to replace</div>';
+    $("#s-enh").hidden = $("#s-conf").hidden = $("#s-find").hidden = false;
+    $("#baWrap").hidden = true; $("#s-res").hidden = true;
+    resetEnh();
+  };
+  r.readAsDataURL(f);
+}
 
-  // Enhance toggle
-  enhanceBtn.addEventListener('click', () => {
-    enhanceOn = !enhanceOn;
-    enhanceBtn.classList.toggle('on', enhanceOn);
-    enhanceBtn.setAttribute('aria-pressed', enhanceOn);
-  });
+/* ---- enhance ---- */
+document.querySelectorAll(".opt").forEach(o => o.onclick = () => {
+  document.querySelectorAll(".opt").forEach(x => x.classList.remove("sel"));
+  o.classList.add("sel"); method = o.dataset.m;
+  const btn = $("#enhBtn"), note = $("#enhNote");
+  if (method === "none"){ btn.disabled = true; note.textContent = "Detection will run on the original image."; currentB64 = originalB64; $("#baWrap").hidden = true; }
+  else { btn.disabled = false; note.textContent = method === "finegrain" ? "The AI enhancer runs on a remote server and can take 30-60s." : "Fast local enhancement."; }
+});
+function resetEnh(){ method="none"; document.querySelectorAll(".opt").forEach((x,i)=>x.classList.toggle("sel",i===0)); $("#enhBtn").disabled=true; $("#enhNote").textContent="Pick an option above, then enhance."; }
 
-  // Drag & drop
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f) loadFile(f);
-  });
+$("#enhBtn").onclick = async () => {
+  const btn = $("#enhBtn"); btn.disabled = true;
+  const label = btn.textContent; btn.innerHTML = '<span class="spin"></span>Enhancing';
+  $("#enhNote").textContent = method === "finegrain" ? "Contacting the finegrain enhancer, please wait..." : "Enhancing...";
+  try {
+    const r = await fetch("/enhance", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({image: originalB64, method})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Enhancement failed.");
+    currentB64 = d.image;
+    $("#baBefore").src = originalB64; $("#baAfter").src = d.image; $("#baWrap").hidden = false;
+    $("#enhNote").textContent = `Enhanced with ${d.method} in ${d.seconds}s, now ${d.width}x${d.height}. Detection will use this image.`;
+  } catch(e){ $("#enhNote").innerHTML = '<span style="color:var(--red-dark)">'+e.message+'</span>'; }
+  btn.disabled = false; btn.textContent = label;
+};
 
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files[0]) loadFile(fileInput.files[0]);
-  });
+/* ---- confidence ---- */
+$("#conf").oninput = e => $("#confVal").textContent = Math.round(e.target.value*100)+"%";
 
-  function loadFile(file) {
-    selectedFile = file;
-    const url = URL.createObjectURL(file);
-    previewImg.src = url;
-    previewStrip.style.display = 'block';
-    findBtn.disabled = false;
-    clearBtn.style.display = '';
-    hideResults();
+/* ---- find ---- */
+$("#findBtn").onclick = async () => {
+  const btn = $("#findBtn"); btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Searching the page...';
+  $("#findErr").innerHTML = "";
+  try {
+    const r = await fetch("/predict", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({image: currentB64, conf: parseFloat($("#conf").value)})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Detection failed.");
+    render(d);
+  } catch(e){ $("#findErr").innerHTML = '<div class="err">'+e.message+'</div>'; }
+  btn.disabled = false; btn.innerHTML = '<span class="st"></span>Find Waldo';
+};
+
+let DET = [], IMW = 1, IMH = 1, VIEW = "res";
+const SEL = new Set();   // ranks whose box is shown; defaults to the top guess
+
+function render(d){
+  DET = d.detections; IMW = d.width; IMH = d.height;
+  SEL.clear(); if (DET.length) SEL.add(1);   // show only the highest-confidence box
+  VIEW = "res";
+
+  const badge = $("#badge");
+  badge.className = "badge " + (d.found ? "yes" : "no");
+  badge.textContent = d.found ? "Waldo found" : "No confident match";
+  const best = DET[0] ? Math.round(DET[0].confidence*100) : 0;
+  $("#stCount").textContent = d.count;
+  $("#stConf").textContent = best + "%";
+  $("#stSize").textContent = d.width + "x" + d.height;
+  $("#stTime").textContent = d.seconds + "s";
+  $("#resImg").src = d.result_image;
+  $("#tRes").classList.add("on"); $("#tOrig").classList.remove("on");
+  $("#detsHint").style.display = DET.length ? "" : "none";
+
+  const box = $("#dets"); box.innerHTML = "";
+  if (!DET.length){
+    box.innerHTML = '<div class="note">Nothing above the threshold. Try lowering it, or enhance the image first.</div>';
   }
-
-  clearBtn.addEventListener('click', () => {
-    selectedFile = null;
-    fileInput.value = '';
-    previewStrip.style.display = 'none';
-    findBtn.disabled = true;
-    clearBtn.style.display = 'none';
-    hideResults();
+  DET.forEach(x => {
+    const pc = Math.round(x.confidence*100);
+    box.insertAdjacentHTML("beforeend",
+      `<div class="det${x.rank===1?' sel':''}" data-rank="${x.rank}"><span class="rk">${x.rank}</span>
+       <span class="co">center (${x.cx}, ${x.cy})  &middot;  box ${x.x1},${x.y1} to ${x.x2},${x.y2}</span>
+       <span class="bar"><i style="width:${pc}%"></i></span><span class="pc">${pc}%</span></div>`);
+  });
+  box.querySelectorAll(".det").forEach(row => row.onclick = () => {
+    const r = +row.dataset.rank;
+    if (SEL.has(r)) SEL.delete(r); else SEL.add(r);
+    row.classList.toggle("sel", SEL.has(r));
+    drawBoxes();
   });
 
-  function hideResults() {
-    resultCard.style.display = 'none';
-    errorBox.style.display = 'none';
-    spinner.style.display = 'none';
-  }
+  drawBoxes();
+  $("#s-res").hidden = false;
+  $("#s-res").scrollIntoView({behavior:"smooth", block:"start"});
+}
 
-  // Tab switching
-  document.querySelectorAll('.img-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.img-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
-    });
+function drawBoxes(){
+  const bx = $("#imgbox");
+  bx.querySelectorAll(".obox").forEach(e => e.remove());
+  if (VIEW !== "res") return;
+  DET.forEach(x => {
+    if (!SEL.has(x.rank)) return;
+    const el = document.createElement("div");
+    el.className = "obox" + (x.rank === 1 ? "" : " alt");
+    el.style.left   = (x.x1 / IMW * 100) + "%";
+    el.style.top    = (x.y1 / IMH * 100) + "%";
+    el.style.width  = ((x.x2 - x.x1) / IMW * 100) + "%";
+    el.style.height = ((x.y2 - x.y1) / IMH * 100) + "%";
+    el.innerHTML = `<span class="olab">${x.rank}  ${Math.round(x.confidence*100)}%</span>`;
+    bx.appendChild(el);
   });
+}
 
-  // Find Waldo
-  findBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-
-    hideResults();
-    spinner.style.display = 'block';
-    findBtn.disabled = true;
-
-    const form = new FormData();
-    form.append('image', selectedFile);
-    form.append('conf', confSlider.value);
-    form.append('enhance', enhanceOn);
-    form.append('method', document.getElementById('enhance-method').value);
-
-    try {
-      const res = await fetch('/predict', { method: 'POST', body: form });
-      const data = await res.json();
-      spinner.style.display = 'none';
-      findBtn.disabled = false;
-
-      if (data.error) { showError(data.error); return; }
-
-      showResult(data);
-    } catch (err) {
-      spinner.style.display = 'none';
-      findBtn.disabled = false;
-      showError('Request failed: ' + err.message);
-    }
-  });
-
-  function showError(msg) {
-    errorBox.textContent = 'warning️  ' + msg;
-    errorBox.style.display = 'block';
-  }
-
-  function showResult(data) {
-    // Badge
-    const badge = document.getElementById('result-badge');
-    if (data.found) {
-      badge.innerHTML = `<span class="badge badge-found">ok Waldo Found!</span>`;
-    } else {
-      badge.innerHTML = `<span class="badge badge-notfound">❌ Waldo Not Found</span>`;
-    }
-
-    // Stats
-    document.getElementById('stat-count').textContent = data.count;
-    const bestConf = data.detections.length
-      ? Math.round(Math.max(...data.detections.map(d => d.confidence)) * 100) + '%'
-      : '-';
-    document.getElementById('stat-conf').textContent = bestConf;
-    document.getElementById('stat-size').textContent = `${data.image_w}x${data.image_h}`;
-
-    // Images
-    document.getElementById('result-img').src   = 'data:image/jpeg;base64,' + data.result_image;
-    document.getElementById('original-img').src = 'data:image/jpeg;base64,' + data.original_image;
-
-    // Switch to result tab
-    document.querySelectorAll('.img-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.img-panel').forEach(p => p.classList.remove('active'));
-    document.querySelector('[data-panel="result"]').classList.add('active');
-    document.getElementById('panel-result').classList.add('active');
-
-    // Detection list
-    const detList = document.getElementById('det-list');
-    const detItems = document.getElementById('det-items');
-    detItems.innerHTML = '';
-    if (data.detections.length > 0) {
-      data.detections.forEach((d, i) => {
-        const pct = Math.round(d.confidence * 100);
-        detItems.innerHTML += `
-          <div class="det-item">
-            <div class="det-num">${i+1}</div>
-            <div>
-              <div>Box (${d.x1}, ${d.y1}) -> (${d.x2}, ${d.y2})</div>
-              <div style="color:var(--muted);font-size:0.8rem">Centre: (${d.cx}, ${d.cy})</div>
-            </div>
-            <div class="conf-bar"><div class="conf-bar-fill" style="width:${pct}%"></div></div>
-            <div class="det-conf">${pct}%</div>
-          </div>`;
-      });
-      detList.style.display = 'block';
-    } else {
-      detList.style.display = 'none';
-    }
-
-    resultCard.style.display = 'block';
-
-    // Scroll to result
-    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+function setView(v){
+  VIEW = v;
+  $("#tRes").classList.toggle("on", v==="res");
+  $("#tOrig").classList.toggle("on", v==="orig");
+  drawBoxes();
+}
+$("#tRes").onclick = () => setView("res");
+$("#tOrig").onclick = () => setView("orig");
 </script>
-
 </body>
 </html>

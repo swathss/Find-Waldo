@@ -1,238 +1,180 @@
-"""
-Find Waldo: Flask web app
-Run: python web/app.py
-Then open: http://localhost:5000
-"""
+"""Find Waldo web app.
 
-import io
+Flow: upload -> optional enhance (local sharpen, Real-ESRGAN, or the finegrain
+diffusion enhancer) -> pick a confidence threshold -> detect with multi-scale
+WBF inference on the reported model.
+
+Run: python web/app.py   then open http://localhost:8080
+"""
+import sys
 import base64
+import time
+import tempfile
+
 import cv2
 import numpy as np
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify
 from ultralytics import YOLO
-from PIL import Image
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # 20 MB max upload
+app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
-ROOT    = Path(__file__).parent.parent
-MODEL   = ROOT / "models/waldo_synth_A/weights/best.pt"
-FALLBACK= ROOT / "models/waldo_synth/weights/best.pt"
+ROOT = Path(__file__).parent.parent
+MODEL = ROOT / "models/waldo_book_decoy/weights/best.pt"
+FALLBACK = ROOT / "models/waldo_book_ms/weights/best.pt"
 
-# Load model once at startup
-model_path = MODEL if MODEL.exists() else FALLBACK
-print(f"Loading model: {model_path}")
-yolo = YOLO(str(model_path))
-print("Model ready ok")
+sys.path.insert(0, str(ROOT / "scripts"))
+from detect_multiscale import multiscale_detect, pick_device
 
-
-def _nms(dets, iou_thresh=0.45):
-    if len(dets) == 0:
-        return np.empty((0, 5), dtype=np.float32)
-
-    dets = np.asarray(dets, dtype=np.float32)
-    x1, y1, x2, y2, scores = dets.T
-    areas = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
-    order = scores.argsort()[::-1]
-    keep = []
-
-    while order.size:
-        i = order[0]
-        keep.append(i)
-        if order.size == 1:
-            break
-
-        rest = order[1:]
-        xx1 = np.maximum(x1[i], x1[rest])
-        yy1 = np.maximum(y1[i], y1[rest])
-        xx2 = np.minimum(x2[i], x2[rest])
-        yy2 = np.minimum(y2[i], y2[rest])
-        inter = np.maximum(0, xx2 - xx1) * np.maximum(0, yy2 - yy1)
-        union = areas[i] + areas[rest] - inter
-        iou = np.divide(inter, union, out=np.zeros_like(inter), where=union > 0)
-        order = rest[iou <= iou_thresh]
-
-    return dets[keep]
+yolo = YOLO(str(MODEL if MODEL.exists() else FALLBACK))
+DEV = pick_device()
+print(f"Model ready on {DEV}: {MODEL.name if MODEL.exists() else FALLBACK.name}")
 
 
-def detect_tiled(model, img, tile=640, overlap=128, conf=0.25):
-    # waldo is tiny, so slide a window over the full image instead of shrinking it
+# ---------- image <-> base64 ----------
+def b64_to_cv2(data):
+    if "," in data:
+        data = data.split(",", 1)[1]
+    arr = np.frombuffer(base64.b64decode(data), np.uint8)
+    return cv2.imdecode(arr, cv2.IMREAD_COLOR)
+
+
+def cv2_to_b64(img):
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 92])
+    return "data:image/jpeg;base64," + base64.b64encode(buf).decode()
+
+
+# ---------- enhancement backends ----------
+def enhance_sharpen(img, min_side=1500, max_side=4000):
+    """Local, fast: denoise, upscale small images, then unsharp mask."""
     h, w = img.shape[:2]
-    step = tile - overlap
-    x_starts = list(range(0, max(w - tile, 0) + 1, step))
-    y_starts = list(range(0, max(h - tile, 0) + 1, step))
-    last_x = max(w - tile, 0)
-    last_y = max(h - tile, 0)
-    if not x_starts or x_starts[-1] != last_x:
-        x_starts.append(last_x)
-    if not y_starts or y_starts[-1] != last_y:
-        y_starts.append(last_y)
-
-    dets = []
-    for y in y_starts:
-        for x in x_starts:
-            crop = img[y:min(y + tile, h), x:min(x + tile, w)]
-            results = model.predict(
-                source=crop,
-                conf=conf,
-                iou=0.45,
-                imgsz=tile,
-                verbose=False,
-            )
-            for result in results:
-                for box in result.boxes:
-                    bx1, by1, bx2, by2 = map(float, box.xyxy[0])
-                    confidence = float(box.conf[0])
-                    dets.append([bx1 + x, by1 + y, bx2 + x, by2 + y, confidence])
-
-    return _nms(dets)
-
-
-def enhance_image(img, min_side=1500, max_side=4000):
-    # clean up and enlarge the image so a small or soft waldo survives detection.
-    # only runs when the user turns on the enhance toggle.
-    h, w = img.shape[:2]
-    short = min(h, w)
-
-    # denoise while the image is still small (faster), then upscale, then sharpen
     img = cv2.fastNlMeansDenoisingColored(img, None, 3, 3, 7, 21)
-    if short < min_side:
-        scale = min(min_side / short, max_side / max(h, w))
-        if scale > 1.01:
-            img = cv2.resize(img, (round(w * scale), round(h * scale)),
-                             interpolation=cv2.INTER_LANCZOS4)
+    if min(h, w) < min_side:
+        s = min(min_side / min(h, w), max_side / max(h, w))
+        if s > 1.01:
+            img = cv2.resize(img, (round(w * s), round(h * s)), interpolation=cv2.INTER_LANCZOS4)
     soft = cv2.GaussianBlur(img, (0, 0), 1.2)
-    img = cv2.addWeighted(img, 1.6, soft, -0.6, 0)
-    return img
+    return cv2.addWeighted(img, 1.6, soft, -0.6, 0)
 
 
-# Real-ESRGAN super-resolution, loaded lazily the first time it is used.
-SR_WEIGHTS = ROOT / "models/sr/RealESRGAN_x4plus_anime_6B.pth"
-_sr_model = None
+_sr = None
 
 
-def _load_sr():
-    global _sr_model
-    if _sr_model is None:
-        import torch
-        from spandrel import ModelLoader, ImageModelDescriptor
-        dev = "mps" if torch.backends.mps.is_available() else \
-              ("cuda" if torch.cuda.is_available() else "cpu")
-        m = ModelLoader().load_from_file(str(SR_WEIGHTS))
-        if not isinstance(m, ImageModelDescriptor):
-            raise RuntimeError("unexpected model type")
-        _sr_model = (m.to(dev).eval(), dev)
-    return _sr_model
-
-
-def super_resolve(img, max_long=3000):
-    # run Real-ESRGAN, then cap the long side so detection stays reasonably fast
+def enhance_realesrgan(img, max_long=3000):
+    global _sr
     import torch
-    model, dev = _load_sr()
+    if _sr is None:
+        from spandrel import ModelLoader, ImageModelDescriptor
+        m = ModelLoader().load_from_file(str(ROOT / "models/sr/RealESRGAN_x4plus_anime_6B.pth"))
+        if not isinstance(m, ImageModelDescriptor):
+            raise RuntimeError("unexpected SR model type")
+        _sr = (m.to(DEV).eval(), DEV)
+    model, dev = _sr
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
     t = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).to(dev)
     with torch.no_grad():
         out = model(t).clamp(0, 1).squeeze(0).permute(1, 2, 0).cpu().numpy()
     sr = cv2.cvtColor((out * 255).round().astype(np.uint8), cv2.COLOR_RGB2BGR)
-    long_side = max(sr.shape[:2])
-    if long_side > max_long:
-        s = max_long / long_side
-        sr = cv2.resize(sr, (round(sr.shape[1] * s), round(sr.shape[0] * s)),
-                        interpolation=cv2.INTER_AREA)
+    if max(sr.shape[:2]) > max_long:
+        s = max_long / max(sr.shape[:2])
+        sr = cv2.resize(sr, (round(sr.shape[1] * s), round(sr.shape[0] * s)), interpolation=cv2.INTER_AREA)
     return sr
 
 
-def pil_to_b64(img: Image.Image, fmt="JPEG") -> str:
-    buf = io.BytesIO()
-    img.save(buf, format=fmt, quality=90)
-    return base64.b64encode(buf.getvalue()).decode()
+_fg_client = None
 
 
-def cv2_to_b64(img_bgr: np.ndarray) -> str:
-    rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    pil = Image.fromarray(rgb)
-    return pil_to_b64(pil)
+def enhance_finegrain(img, upscale=2):
+    """Diffusion enhancer via the finegrain Hugging Face Space (needs internet)."""
+    global _fg_client
+    from gradio_client import Client, handle_file
+    if _fg_client is None:
+        _fg_client = Client("finegrain/finegrain-image-enhancer")
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+        cv2.imwrite(f.name, img)
+        path = f.name
+    res = _fg_client.predict(
+        input_image=handle_file(path),
+        prompt="a detailed Where's Waldo illustration, clean sharp linework, high detail",
+        negative_prompt="blurry, low quality, artifacts",
+        seed=42, upscale_factor=upscale, controlnet_scale=0.6, controlnet_decay=1.0,
+        condition_scale=6, tile_width=112, tile_height=144, denoise_strength=0.35,
+        num_inference_steps=18, solver="DDIM", api_name="/process",
+    )
+    after = res[1] if isinstance(res, (list, tuple)) else res
+    out = cv2.imread(after)
+    if out is None:
+        raise RuntimeError("enhancer returned no image")
+    return out
 
 
+ENHANCERS = {"sharpen": enhance_sharpen, "realesrgan": enhance_realesrgan, "finegrain": enhance_finegrain}
+
+
+# ---------- routes ----------
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
+@app.route("/enhance", methods=["POST"])
+def enhance():
+    data = request.get_json(silent=True) or {}
+    method = data.get("method", "sharpen")
+    if "image" not in data:
+        return jsonify({"error": "No image provided."}), 400
+    if method not in ENHANCERS:
+        return jsonify({"error": f"Unknown method: {method}"}), 400
+    img = b64_to_cv2(data["image"])
+    if img is None:
+        return jsonify({"error": "Could not read the image."}), 400
+    t0 = time.time()
+    try:
+        out = ENHANCERS[method](img)
+    except Exception as e:
+        return jsonify({"error": f"Enhancement failed ({method}): {e}"}), 502
+    h, w = out.shape[:2]
+    return jsonify({"image": cv2_to_b64(out), "width": w, "height": h,
+                    "method": method, "seconds": round(time.time() - t0, 1)})
+
+
 @app.route("/predict", methods=["POST"])
 def predict():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
-
-    file = request.files["image"]
-    if file.filename == "":
-        return jsonify({"error": "Empty filename"}), 400
-
-    conf_thresh = float(request.form.get("conf", 0.25))
-    do_enhance = request.form.get("enhance", "false") == "true"
-    method = request.form.get("method", "builtin")
-
-    # Read image
-    file_bytes = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    data = request.get_json(silent=True) or {}
+    if "image" not in data:
+        return jsonify({"error": "No image provided."}), 400
+    conf = float(data.get("conf", 0.15))
+    img = b64_to_cv2(data["image"])
     if img is None:
-        return jsonify({"error": "Could not read image"}), 400
+        return jsonify({"error": "Could not read the image."}), 400
 
-    # keep the true upload for the "before" image, enhance only if asked to
-    original = img.copy()
-    was_enhanced = False
-    enhance_method = None
-    if do_enhance:
-        if method == "ai" and SR_WEIGHTS.exists():
-            try:
-                img = super_resolve(img)
-                enhance_method = "ai"
-            except Exception:
-                img = enhance_image(img)      # fall back if the SR model fails
-                enhance_method = "builtin (AI unavailable)"
-        else:
-            img = enhance_image(img)
-            enhance_method = "builtin"
-        was_enhanced = True
+    # cap very large (enhanced) images so detection stays responsive
+    if max(img.shape[:2]) > 2600:
+        s = 2600 / max(img.shape[:2])
+        img = cv2.resize(img, (round(img.shape[1] * s), round(img.shape[0] * s)))
     h, w = img.shape[:2]
 
-    # Draw detections
-    annotated = img.copy()
-    detections = []
-
-    dets = detect_tiled(yolo, img, tile=640, overlap=128, conf=conf_thresh)
+    t0 = time.time()
+    dets = multiscale_detect(yolo, img, tiles=(320, 512, 768), conf=conf, device=DEV)
     if len(dets) > 10:
         dets = dets[dets[:, 4].argsort()[::-1][:10]]
-    for x1, y1, x2, y2, confidence in dets:
+
+    # return a clean image plus coordinates; the browser overlays the boxes so the
+    # user can show one detection at a time
+    out = []
+    for i, (x1, y1, x2, y2, c) in enumerate(dets, 1):
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-        confidence = float(confidence)
-
-        # Draw red box + label
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 220), 3)
-        label = f"Waldo  {confidence:.0%}"
-        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-        cv2.rectangle(annotated, (x1, y1 - th - 10), (x1 + tw + 8, y1), (0, 0, 220), -1)
-        cv2.putText(annotated, label, (x1 + 4, y1 - 6),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-
-        detections.append({
-            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
-            "confidence": round(confidence, 3),
-            "cx": (x1 + x2) // 2,
-            "cy": (y1 + y2) // 2,
-        })
+        out.append({"rank": i, "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+                    "cx": (x1 + x2) // 2, "cy": (y1 + y2) // 2, "confidence": round(float(c), 3)})
 
     return jsonify({
-        "found": len(detections) > 0,
-        "count": len(detections),
-        "detections": detections,
-        "image_w": w,
-        "image_h": h,
-        "enhanced": was_enhanced,
-        "enhance_method": enhance_method,
-        "result_image": cv2_to_b64(annotated),
-        "original_image": cv2_to_b64(original),
+        "found": len(out) > 0,
+        "count": len(out),
+        "detections": out,
+        "width": w, "height": h,
+        "seconds": round(time.time() - t0, 1),
+        "result_image": cv2_to_b64(img),
     })
 
 
