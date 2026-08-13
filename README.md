@@ -67,9 +67,8 @@ improvement came from changing the training data, not from tuning the model.
 | **waldo_book_decoy** | real tiles + decoys | **0.76** (multi-scale) | **reported model** |
 | waldo_book_ms | multi-scale tiles + copy-paste | 0.71 | larger-data experiment, tied with decoy |
 
-Status: reported model locked. Web demo working. Poster deliverables assembled
-under `poster_deliverables/`. Book-fold cross-validation and multi-class
-detection are the main open items.
+Status: reported model locked. Web demo working. Book-fold cross-validation and
+multi-class detection are the main open items.
 
 ## Example detections
 
@@ -204,8 +203,7 @@ by book.
   Waldo boxes. Raw scans are copyrighted and kept local (git-ignored); labels
   and scripts reproduce the tiled dataset.
 - Decoy source: a 5-class Roboflow dataset (Odlaw and Wizard crops only).
-- See `DATASETS.md` and `poster_deliverables/SOURCES.md` for sources, licences,
-  and the leakage-safe splitting.
+- See `DATASETS.md` for sources, licences, and the leakage-safe splitting.
 
 ## Web demo
 
@@ -255,7 +253,7 @@ waldo-finder/
   src/                      earlier baseline scripts (template match, prep)
   web/                      Flask demo (upload an image, get detections)
   data/                     datasets, kept local and git-ignored
-  poster_deliverables/      metrics, sources, figures, per-model result images
+  docs/images/              detection examples and evaluation graphs
   DATASETS.md               source inventory, licences, leakage controls
 ```
 
@@ -278,6 +276,6 @@ waldo-finder/
 - Weighted Boxes Fusion (ensemble-boxes, MIT): https://github.com/ZFTurbo/Weighted-Boxes-Fusion
 
 Code is released under the repository licence. Datasets retain their original
-licences (see `DATASETS.md` and `poster_deliverables/SOURCES.md`). Raw book-page
+licences (see `DATASETS.md`). Raw book-page
 scans are copyright Martin Handford and the respective publishers and are not
 redistributed here.
