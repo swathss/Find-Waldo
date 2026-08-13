@@ -14,6 +14,7 @@ held-out books the model never saw. Reported model: `waldo_book_decoy`.
 - [Motivation](#motivation)
 - [Approach](#approach)
 - [Project progress](#project-progress)
+- [Example detections](#example-detections)
 - [Results and metrics](#results-and-metrics)
 - [Datasets](#datasets)
 - [Web demo](#web-demo)
@@ -69,6 +70,25 @@ improvement came from changing the training data, not from tuning the model.
 Status: reported model locked. Web demo working. Poster deliverables assembled
 under `poster_deliverables/`. Book-fold cross-validation and multi-class
 detection are the main open items.
+
+## Example detections
+
+The reported model (`waldo_book_decoy`) on held-out book pages it never trained
+on. The red box is the top-1 detection with its confidence.
+
+<p align="center">
+  <img src="docs/images/detect_1.jpg" width="49%" alt="Waldo detected among the battling monks">
+  <img src="docs/images/detect_2.jpg" width="49%" alt="Waldo detected in The Great Waldo Search">
+</p>
+<p align="center">
+  <img src="docs/images/detect_3.jpg" width="49%" alt="Waldo detected in a Where's Waldo scene">
+  <img src="docs/images/detect_4.jpg" width="49%" alt="Waldo detected in a Where's Waldo scene">
+</p>
+
+The top row is from the held-out test book The Great Waldo Search, which the
+model never trained on, so those are genuine cross-book detections. The bottom
+row shows two more example pages (a flag-filled battle and a crowded toy scene).
+The top-left is a hard case: Waldo boxed among a crowd of red and blue monks.
 
 ## Results and metrics
 
